@@ -1,24 +1,21 @@
 apiVersion: automation.cloudbees.io/v1alpha1
 kind: workflow
-name: My workflow
+name: My application release workflow
 on:
-  push:
-    branches:
-      - "**"
   workflow_dispatch:
     inputs:
-      sadfa:
+      manifest:
         type: string
         required: true
 jobs:
-  build:
-    steps:
-      - name: Say hello
-        uses: docker://golang:1.20.3-alpine3.17
-        shell: sh
-        run: |
-          echo "hello world ${{ cloudbees.foo }}"
-          sdfsdfsfsf
-          sdfsdf
-
+  env1-deploy-comp1:
+    uses: urvashisingh/my-go-app/.cloudbees/workflows/reusable-deploy-wf.yaml@main
+    with:
+      manifest: ${{ inputs.manifest }}
+      env: env1
+  env2-deploy-comp1:
+    uses: urvashisingh/my-go-app/.cloudbees/workflows/reusable-deploy-wf.yaml@main
+    with:
+      manifest: ${{ inputs.manifest }}
+      env: env2
 

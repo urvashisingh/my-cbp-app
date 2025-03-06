@@ -7,9 +7,12 @@ on:
       manifest:
         type: string
         required: true
+      test:
+        type: string
+        default: reusable-deploy-wf
 jobs:
   env1-deploy-comp1:
-    uses: urvashisingh/my-go-app/.cloudbees/workflows/reusable-deploy-wf.yaml@main
+    uses: urvashisingh/my-go-app/.cloudbees/workflows/${{inputs.test}}.yaml@main
     with:
       manifest: ${{ inputs.manifest }}
       env: env1

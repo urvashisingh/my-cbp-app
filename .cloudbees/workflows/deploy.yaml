@@ -12,14 +12,14 @@ on:
         type: string
 jobs:
   MyAppAPIs:
-    if: ${{ fromJSON(inputs.manifest)."Comp 1"."Art1".deployed }}
+    if: ${{ fromJSON(inputs.manifest).MyAppAPIs.Art1.deployed }}
     uses: gmaxey/reusableworkflows/MyAppDeploy.yaml
     with:
       artifactName: MyAppAPIs
       artifactVersion: 2.0.5-0.0.17
       environment: pre-prod
   MyAppFE:
-    if: ${{ fromJSON(inputs.manifest)."Comp 1"."Art2".deployed }}
+    if: ${{ fromJSON(inputs.manifest).MyAppFE.Art2.deployed }}
     uses: gmaxey/reusableworkflows/MyAppDeploy.yaml
     with:
       artifactName: MyAppFE

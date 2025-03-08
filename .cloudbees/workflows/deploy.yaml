@@ -1,7 +1,6 @@
 apiVersion: automation.cloudbees.io/v1alpha1
 kind: workflow
 name: app-deployer
-description: Application workflow that deploys component artifacts for the application to a given environment using the given manifest
 on:
   workflow_dispatch: 
     inputs:

@@ -20,13 +20,13 @@ on:
          required: true  
 jobs:
   MyAppAPIs:
-    if: ${{ fromJSON(inputs.manifest).MyAppAPIs.Art11.deploy }} || ${{ fromJSON(inputs.manifest).MyAppAPIs.Art12.deploy }}
+    if: ${{ fromJSON(inputs.manifest).MyAppAPIs.deploy }}
     uses: urvashisingh/my-go-app/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppAPIs) }}
       environment: ${{ inputs.environment }}
   MyAppFE:
-    if: ${{ fromJSON(inputs.manifest).MyAppFE.Art21.deploy }}
+    if: ${{ fromJSON(inputs.manifest).MyAppFE.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppFE) }}

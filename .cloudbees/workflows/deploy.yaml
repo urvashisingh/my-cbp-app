@@ -27,7 +27,7 @@ jobs:
       environment: ${{ inputs.environment }}
   MyAppFE:
     if: ${{ fromJSON(inputs.manifest).MyAppFE.Art21.deploy }}
-    uses: urvashisingh/my-go-app/.cloudbees/workflows/deploy.yaml
+    uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppFE) }}
       environment: ${{ inputs.environment }}

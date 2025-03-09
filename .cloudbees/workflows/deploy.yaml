@@ -21,21 +21,13 @@ on:
 jobs:
   MyAppAPIs:
     if: ${{ fromJSON(inputs.manifest).MyAppAPIs.Art11.deploy }} || ${{ fromJSON(inputs.manifest).MyAppAPIs.Art12.deploy }}
-    uses: gmaxey/reusableworkflows/MyAppDeploy.yaml
+    uses: urvashisingh/my-go-app/.cloudbees/workflows/deploy.yaml
     with:
-      artifactName: MyAppAPIs
-      artifactVersion: ${{ fromJSON(inputs.manifest).MyAppAPIs.Art11.version }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppAPIs) }}
       environment: ${{ inputs.environment }}
   MyAppFE:
     if: ${{ fromJSON(inputs.manifest).MyAppFE.Art21.deploy }}
-    uses: gmaxey/reusableworkflows/MyAppDeploy.yaml
+    uses: urvashisingh/my-go-app/.cloudbees/workflows/deploy.yaml
     with:
-      artifactName: MyAppFE
-      artifactVersion: 3.0.3-0.0.14
-      environment: ${{ inputs.environment }}
-  MyAppBE:
-    uses: gmaxey/reusableworkflows/MyAppDeploy.yaml
-    with:
-      artifactName: MyAppBE
-      artifactVersion: 2.2.0-0.0.21
+      manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppFE) }}
       environment: ${{ inputs.environment }}

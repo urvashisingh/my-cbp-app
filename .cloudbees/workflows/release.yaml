@@ -14,10 +14,16 @@ jobs:
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
-      environment: us-env
-  deploy-to-prod:
+      environment: dev
+  deploy-to-qa:
     needs: deploy-to-dev
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
-      environment: us-env2    
+      environment: qa    
+  deploy-to-prod:
+    needs: deploy-to-qa
+    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: prod    

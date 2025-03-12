@@ -16,6 +16,7 @@ jobs:
       manifest: ${{ inputs.manifest }}
       environment: us-env
   deploy-to-prod:
+    needs: deploy-to-dev
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}

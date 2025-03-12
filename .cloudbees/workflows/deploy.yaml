@@ -19,15 +19,15 @@ on:
          type: string
          required: true  
 jobs:
-  MyAppAPIs:
-    if: ${{ fromJSON(inputs.manifest).MyAppAPIs.deploy }}
-    uses: urvashisingh/my-go-app/.cloudbees/workflows/deploy.yaml
+  app1:
+    if: ${{ fromJSON(inputs.manifest).app1.deploy }}
+    uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppAPIs) }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest).app1) }}
       environment: ${{ inputs.environment }}
-  MyAppFE:
-    if: ${{ fromJSON(inputs.manifest).MyAppFE.deploy }}
+  app3:
+    if: ${{ fromJSON(inputs.manifest).app3.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest).MyAppFE) }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest).app3) }}
       environment: ${{ inputs.environment }}

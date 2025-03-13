@@ -22,6 +22,36 @@ jobs:
   temp-process-manifest:
     outputs:
       manifest: ${{ steps.step1.outputs.manifest }}
+    steps:
+      - name: process-manifest
+        uses: docker://alpine:3.18
+        id: step1
+        run: |
+          cat > $CLOUDBEES_OUTPUTS/manifest<< EOF
+          {
+            "app1": {
+              "deploy": true,
+              "art1-fe": {
+                "deploy": false,
+                "version": "n/a",
+                "url": "n/a"
+              },
+              "art1-be": {
+                "deploy": true,
+                "version": "1.4",
+                "url": "docker.io/MyApp/art1-be:1.4"
+              }
+            },
+            "app3": {
+              "deploy": true,
+              "art3": {
+                "deploy": true,
+                "version": "2.4",
+                "url": "docker.io/MyApp/art3:2.4"
+              }
+            }
+          }
+          EOF
   app1:
     needs: temp-process-manifest
     if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest).app1.deploy }}

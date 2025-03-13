@@ -19,15 +19,20 @@ on:
          type: string
          required: true  
 jobs:
+  temp-process-manifest:
+    outputs:
+      manifest: ${{ steps.step1.outputs.manifest }}
   app1:
-    if: ${{ fromJSON(inputs.manifest).app1.deploy }}
+    needs: temp-process-manifest
+    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest).app1.deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest).app1) }}
+      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest).app1) }}
       environment: ${{ inputs.environment }}
   app3:
-    if: ${{ fromJSON(inputs.manifest).app3.deploy }}
+    needs: temp-process-manifest
+    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest).app3.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest).app3) }}
+      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest).app3) }}
       environment: ${{ inputs.environment }}

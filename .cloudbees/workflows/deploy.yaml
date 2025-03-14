@@ -33,13 +33,13 @@ jobs:
               "deploy": true,
               "art1-fe": {
                 "deploy": true,
-                "version": "1.4",
-                "url": "docker.io/MyApp/art1-fe:1.4"
+                "version": "1.5",
+                "url": "docker.io/MyApp/art1-fe:1.5"
               },
               "art1-be": {
                 "deploy": true,
-                "version": "1.4",
-                "url": "docker.io/MyApp/art1-be:1.4"
+                "version": "1.5",
+                "url": "docker.io/MyApp/art1-be:1.5"
               }
             },
             "app3": {

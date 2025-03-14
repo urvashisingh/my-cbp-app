@@ -32,9 +32,9 @@ jobs:
             "app1": {
               "deploy": true,
               "art1-fe": {
-                "deploy": false,
-                "version": "n/a",
-                "url": "n/a"
+                "deploy": true,
+                "version": "1.4",
+                "url": "docker.io/MyApp/art1-fe:1.4"
               },
               "art1-be": {
                 "deploy": true,

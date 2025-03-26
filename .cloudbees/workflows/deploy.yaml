@@ -29,7 +29,7 @@ jobs:
         run: |
           cat > $CLOUDBEES_OUTPUTS/manifest<< EOF
           {
-            "app1": {
+            "app 1": {
               "deploy": true,
               "art1-fe": {
                 "deploy": true,
@@ -54,10 +54,10 @@ jobs:
           EOF
   app1:
     needs: temp-process-manifest
-    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest).app1.deploy }}
+    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest)."app 1".deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest).app1) }}
+      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest)."app 1") }}
       environment: ${{ inputs.environment }}
   app3:
     needs: temp-process-manifest

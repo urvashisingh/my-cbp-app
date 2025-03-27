@@ -9,6 +9,10 @@ on:
     inputs:
       str:
         type: string
+      options:
+        type: choice
+        options:
+          - op1
 jobs:
   build:
     steps:

@@ -13,6 +13,7 @@ on:
         type: choice
         options:
           - op1
+        default: op1
 jobs:
   build:
     steps:

@@ -19,50 +19,15 @@ on:
          type: string
          required: true  
 jobs:
-  temp-process-manifest:
-    outputs:
-      manifest: ${{ steps.step1.outputs.manifest }}
-    steps:
-      - name: process-manifest
-        uses: docker://alpine:3.18
-        id: step1
-        run: |
-          cat > $CLOUDBEES_OUTPUTS/manifest<< EOF
-          {
-            "app 1": {
-              "deploy": true,
-              "art1-fe": {
-                "deploy": true,
-                "version": "1.5",
-                "url": "docker.io/MyApp/art1-fe:1.5"
-              },
-              "art1-be": {
-                "deploy": true,
-                "version": "1.5",
-                "url": "docker.io/MyApp/art1-be:1.5"
-              }
-            },
-            "app3": {
-              "deploy": true,
-              "art3": {
-                "deploy": true,
-                "version": "2.4",
-                "url": "docker.io/MyApp/art3:2.4"
-              }
-            }
-          }
-          EOF
   app1:
-    needs: temp-process-manifest
-    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest)['app 1'].deploy }}
+    if: ${{ fromJSON(inputs.manifest)['app 1'].deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest)['app 1']) }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest)['app 1']) }}
       environment: ${{ inputs.environment }}
   app3:
-    needs: temp-process-manifest
-    if: ${{ fromJSON(needs.temp-process-manifest.outputs.manifest).app3.deploy }}
+    if: ${{ fromJSON(inputs.manifest).app3.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(needs.temp-process-manifest.outputs.manifest).app3) }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest).app3) }}
       environment: ${{ inputs.environment }}

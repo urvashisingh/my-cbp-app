@@ -20,7 +20,7 @@ on:
          required: true  
 jobs:
   app1:
-    if: ${{ fromJSON(inputs.manifest)['app 1'].deploy }}
+    if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ toJSON(fromJSON(inputs.manifest)['app 1']) }}

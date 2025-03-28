@@ -23,7 +23,7 @@ jobs:
     if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest)['app 1']) }}
+      manifest: ${{ toJSON(fromJSON(inputs.manifest)['app1']) }}
       environment: ${{ inputs.environment }}
   app3:
     if: ${{ fromJSON(inputs.manifest).app3.deploy }}

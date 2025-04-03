@@ -3,22 +3,25 @@ kind: workflow
 name: app-deployer
 description: My Application Deploy Workflow
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
       manifest:
         type: string
         required: true
       environment:
-         type: string
-         required: true
+        type: string
+        required: true
   workflow_call:
     inputs:
       manifest:
         type: string
         required: true
       environment:
-         type: string
-         required: true  
+        type: string
+        required: true
+  push:
+    branches:
+      - main
 jobs:
   app1:
     if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}

@@ -18,9 +18,6 @@ on:
       environment:
         type: string
         required: true
-  push:
-    branches:
-      - main
 jobs:
   app1:
     if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}

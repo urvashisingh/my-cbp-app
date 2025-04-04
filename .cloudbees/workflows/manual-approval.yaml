@@ -34,7 +34,7 @@ jobs:
           options:
             - op1
             - op2
-          default: def
+          default: op2
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1
   echo-approval-inputs:

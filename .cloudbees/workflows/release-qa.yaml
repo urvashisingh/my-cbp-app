@@ -10,19 +10,19 @@ on:
         required: true
 jobs:
   deploy-to-dev:
-    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
+    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy-qa.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: dev
   deploy-to-qa:
     needs: deploy-to-dev
-    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
+    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy-qa.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: test    
   deploy-to-prod:
     needs: deploy-to-qa
-    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
+    uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy-qa.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: us-prod    

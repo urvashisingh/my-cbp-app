@@ -7,7 +7,7 @@ on:
       manifest:
         type: string
         required: true
-        description: A sample manifest should go here, to help user
+        description: See doc link to application release manifest
 metadata:
   stages/v1alpha1:
     - name: dev
@@ -16,14 +16,12 @@ metadata:
     - name: qa
       jobs:
         - Deploy-to-qa
-    - name: Stage
+    - name: prod
       jobs:
-        - job
+        - Deploy-to-prod
 jobs:
   Deploy-to-dev:
     needs: []
-    environment: ""
-    outputs: {}
     steps:
       - run: |
           echo "hello world"
@@ -33,18 +31,16 @@ jobs:
   Deploy-to-qa:
     needs:
       - Deploy-to-dev
-    environment: ""
-    outputs: {}
     steps:
       - run: echo "hello world"
         uses: docker://golang:1.20.3-alpine3.17
         name: deploy
         shell: sh
-  job:
+  Deploy-to-prod:
     needs:
       - Deploy-to-qa
     steps:
-      - name: Say hello
+      - name: deploy
         uses: docker://golang:1.20.3-alpine3.17
         shell: sh
         run: echo "hello world"

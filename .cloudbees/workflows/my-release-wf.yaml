@@ -10,14 +10,41 @@ on:
         description: A sample manifest should go here, to help user
 metadata:
   stages/v1alpha1:
+    - name: dev
+      jobs:
+        - Deploy-to-dev
+    - name: qa
+      jobs:
+        - Deploy-to-qa
     - name: Stage
       jobs:
-        - build
+        - job
 jobs:
-  build:
+  Deploy-to-dev:
+    needs: []
+    environment: ""
+    outputs: {}
+    steps:
+      - run: |
+          echo "hello world"
+        uses: docker://golang:1.20.3-alpine3.17
+        name: deploy
+        shell: sh
+  Deploy-to-qa:
+    needs:
+      - Deploy-to-dev
+    environment: ""
+    outputs: {}
+    steps:
+      - run: echo "hello world"
+        uses: docker://golang:1.20.3-alpine3.17
+        name: deploy
+        shell: sh
+  job:
+    needs:
+      - Deploy-to-qa
     steps:
       - name: Say hello
         uses: docker://golang:1.20.3-alpine3.17
         shell: sh
-        run: |
-          echo "hello world"
+        run: echo "hello world"

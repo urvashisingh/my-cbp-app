@@ -35,7 +35,7 @@ jobs:
   deploy-to-prod:
     needs:
       - deploy-to-preprod
-        uses: ./.cloudbees/workflows/deploy.yaml
+    uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: prod

@@ -1,0 +1,41 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: my-staged-workflow
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        type: string
+        required: true
+        description: Relese manifest with the artifact version details passed by the application release in JSON format
+metadata:
+  stages/v1alpha1:
+    - name: qa
+      jobs:
+        - deploy-to-qa
+    - name: preprod
+      jobs:
+        - deploy-to-preprod
+    - name: prod
+      jobs:
+        - deploy-to-prod
+jobs:
+  deploy-to-qa:
+    uses: ./.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: qa
+  deploy-to-preprod:
+    needs:
+      - deploy-to-qa
+    uses: ./.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: preprod
+  deploy-to-prod:
+    needs:
+      - deploy-to-preprod
+        uses: ./.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: prod

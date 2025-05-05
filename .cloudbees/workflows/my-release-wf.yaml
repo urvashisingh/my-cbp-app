@@ -12,15 +12,16 @@ metadata:
   stages/v1alpha1:
     - name: dev
       jobs:
-        - Deploy-to-dev
+        - deploy-to-dev
     - name: qa
       jobs:
-        - Deploy-to-qa
+        - deploy-to-qa
     - name: prod
       jobs:
-        - Deploy-to-prod
+        - deploy-to-prod
 jobs:
-  Deploy-to-dev:
+  deploy-to-dev:
+    name: Deploy
     needs: []
     steps:
       - run: |
@@ -28,17 +29,17 @@ jobs:
         uses: docker://golang:1.20.3-alpine3.17
         name: deploy
         shell: sh
-  Deploy-to-qa:
+  deploy-to-qa:
     needs:
-      - Deploy-to-dev
+      - deploy-to-dev
     steps:
       - run: echo "hello world"
         uses: docker://golang:1.20.3-alpine3.17
         name: deploy
         shell: sh
-  Deploy-to-prod:
+  deploy-to-prod:
     needs:
-      - Deploy-to-qa
+      - deploy-to-qa
     steps:
       - name: deploy
         uses: docker://golang:1.20.3-alpine3.17

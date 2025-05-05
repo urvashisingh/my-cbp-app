@@ -13,9 +13,9 @@ metadata:
     - name: qa
       jobs:
         - deploy-to-qa
-    - name: preprod
+    - name: pre-prod
       jobs:
-        - deploy-to-preprod
+        - deploy-to-pre-prod
     - name: prod
       jobs:
         - deploy-to-prod
@@ -25,16 +25,16 @@ jobs:
     with:
       manifest: ${{ inputs.manifest }}
       environment: qa
-  deploy-to-preprod:
+  deploy-to-pre-prod:
     needs:
       - deploy-to-qa
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
-      environment: preprod
+      environment: pre-prod
   deploy-to-prod:
     needs:
-      - deploy-to-preprod
+      - deploy-to-pre-prod
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}

@@ -1,46 +1,47 @@
 apiVersion: automation.cloudbees.io/v1alpha1
 kind: workflow
-name: my-release-wf
+name: my-staged-workflow
 on:
   workflow_dispatch:
     inputs:
       manifest:
         type: string
         required: true
-        description: Manifest with the artifact version details passed in to the workflow by the application release when running the workflow in JSON format. See <doc link to application release manifest> for manifest format details. 
+        description: Relese manifest with the artifact version details passed by the application release in JSON format
 metadata:
   stages/v1alpha1:
-    - name: dev
-      jobs:
-        - deploy-to-dev
     - name: qa
       jobs:
         - deploy-to-qa
+    - name: preprod
+      jobs:
+        - deploy-to-preprod
     - name: prod
       jobs:
         - deploy-to-prod
 jobs:
-  deploy-to-dev:
-    needs: []
-    steps:
-      - run: |
-          echo "hello world"
-        uses: docker://golang:1.20.3-alpine3.17
-        name: deploy
-        shell: sh
   deploy-to-qa:
-    needs:
-      - deploy-to-dev
     steps:
-      - run: echo "hello world"
+      - name: Deploy
         uses: docker://golang:1.20.3-alpine3.17
-        name: deploy
         shell: sh
-  deploy-to-prod:
+        run: |
+          echo Deploying...
+  deploy-to-preprod:
     needs:
       - deploy-to-qa
     steps:
-      - name: deploy
+      - name: Deploy
         uses: docker://golang:1.20.3-alpine3.17
         shell: sh
-        run: echo "hello world"
+        run: |
+          echo Deploying...
+  deploy-to-prod:
+    needs:
+      - deploy-to-preprod
+    steps:
+      - name: Deploy
+        uses: docker://golang:1.20.3-alpine3.17
+        shell: sh
+        run: |
+          echo Deploying...

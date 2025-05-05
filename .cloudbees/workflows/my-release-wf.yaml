@@ -7,7 +7,7 @@ on:
       manifest:
         type: string
         required: true
-        description: See doc link to application release manifest
+        description: Manifest with the artifact version details passed in to the workflow by the application release when running the workflow in JSON format. See <doc link to application release manifest> for manifest format details. 
 metadata:
   stages/v1alpha1:
     - name: dev
@@ -21,7 +21,6 @@ metadata:
         - deploy-to-prod
 jobs:
   deploy-to-dev:
-    name: Deploy
     needs: []
     steps:
       - run: |

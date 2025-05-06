@@ -10,7 +10,6 @@ on:
         required: true
 jobs:
   deploy-to-dev:
-    name: Deploy to Dev
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}

@@ -8,6 +8,7 @@ on:
       manifest:
         type: string
         required: true
+
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml

@@ -4,7 +4,7 @@ name: Valera-25-may
 on:
   workflow_dispatch:
     inputs:
-      manifest:
+      manifest1:
         type: string
         required: true
         description: A sample manifest should go here, to help user

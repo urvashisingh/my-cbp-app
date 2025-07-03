@@ -11,4 +11,4 @@ jobs:
       - uses: docker://urvashisingh/jq:0.0.1
         shell: sh
         run: |
-          echo '{ "greet": hello world" }' | jq '.greet'
+          echo '{ "greet": "hello world" }' | jq '.greet'

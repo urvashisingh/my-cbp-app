@@ -37,5 +37,5 @@ jobs:
         with:
           content: This is another evidence
         uses: cloudbees-io/publish-evidence-item@v1
-    needs: deploy    
+    needs: deploy-to-dev    
      

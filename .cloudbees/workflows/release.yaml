@@ -13,12 +13,6 @@ jobs:
     with:
       manifest: ${{ inputs.manifest }}
       environment: dev
-  deploy-to-qa:
-    needs: deploy-to-dev
-    uses: ./.cloudbees/workflows/deploy.yaml
-    with:
-      manifest: ${{ inputs.manifest }}
-      environment: qa
   deploy-to-prod:
     needs:
       - prod-approval
@@ -40,7 +34,7 @@ jobs:
   prod-approval:
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1
-    needs: deploy-to-qa
+    needs: deploy-to-dev
     with:
       approvers: ""
       disallowLaunchByUser: false

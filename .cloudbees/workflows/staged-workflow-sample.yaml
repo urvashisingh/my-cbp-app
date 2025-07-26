@@ -42,7 +42,6 @@ jobs:
       - deploy-to-preprod-us-west-2
   deploy-to-preprod-us-east-1:
     needs:
-      - deploy-to-preprod-us-west-2
       - approval-job-west
     steps:
       - name: Deploy to preprod-us-east-1
@@ -64,5 +63,3 @@ jobs:
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1   
     needs: 
       - deploy-to-preprod-us-east-1
-      - deploy-to-preprod-us-west-2
-      - approval-job-west

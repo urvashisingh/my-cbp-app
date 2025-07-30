@@ -6,6 +6,7 @@ on:
     inputs:
       manifest:
         type: string
+        required: true
 jobs:
   Approval-job:
     timeout-minutes: 4320

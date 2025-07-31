@@ -4,9 +4,8 @@ name: My workflow
 on:
   workflow_dispatch:
     inputs:
-      manifest:
+      manifest2:
         type: string
-        required: true
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml

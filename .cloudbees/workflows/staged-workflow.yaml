@@ -1,0 +1,58 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: staged-workflow
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        type: string
+        required: true
+        description: This is a system-generated parameter and is required for use in
+          application releases. Refer to
+          https://docs.cloudbees.com/docs/cloudbees-platform/latest/applications/releases#manifest
+          for the expected format
+metadata:
+  stages/v1alpha1:
+    - name: dev
+      jobs:
+        - deploy-to-dev
+    - name: qa
+      jobs:
+        - deploy-to-qa
+    - name: pre-prod
+      jobs:
+        - deploy-to-pre-prod
+    - name: prod
+      jobs:
+        - deploy-to-prod
+jobs:
+  deploy-to-dev:
+    steps:
+      - name: Deploy to dev
+        uses: docker://golang:1.20.3-alpine3.17
+        shell: sh
+        run: echo "Deploying to dev"
+  deploy-to-qa:
+    needs:
+      - deploy-to-dev
+    steps:
+      - name: Deploy to qa
+        uses: docker://golang:1.20.3-alpine3.17
+        shell: sh
+        run: echo "Deploying to qa"
+  deploy-to-pre-prod:
+    needs:
+      - deploy-to-qa
+    steps:
+      - name: Deploy to pre-prod
+        uses: docker://golang:1.20.3-alpine3.17
+        shell: sh
+        run: echo "Deploying to pre-prod"
+  deploy-to-prod:
+    needs:
+      - deploy-to-pre-prod
+    steps:
+      - name: Deploy to prod
+        uses: docker://golang:1.20.3-alpine3.17
+        shell: sh
+        run: echo "Deploying to prod"

@@ -28,10 +28,10 @@ metadata:
 jobs:
   deploy-to-dev:
     steps:
-      - name: Deploy to dev
+      - run: echo "Deploying to dev ${{ inputs.manifest }}"
         uses: docker://golang:1.20.3-alpine3.17
+        name: Deploy to dev
         shell: sh
-        run: echo "Deploying to dev"
   deploy-to-qa:
     needs:
       - deploy-to-dev

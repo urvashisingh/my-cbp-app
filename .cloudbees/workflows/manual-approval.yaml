@@ -25,7 +25,7 @@ jobs:
         in1:
           type: string
           required: true
-          description: One of the required approver inputs
+          description: One of the required approval inputs
         in2:
           type: number
           description: a numeric input

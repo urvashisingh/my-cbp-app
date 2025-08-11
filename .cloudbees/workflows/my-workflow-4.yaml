@@ -27,15 +27,3 @@ jobs:
     with:
       manifest: ${{ inputs.manifest }}
       environment: prod    
-  publish-evidence:
-    steps:
-      - name: publish evidence
-        with:
-          content: This is evidence
-        uses: cloudbees-io/publish-evidence-item@v1
-      - name: publish second evidence
-        with:
-          content: This is another evidence
-        uses: cloudbees-io/publish-evidence-item@v1
-    needs: deploy-to-dev    
-     

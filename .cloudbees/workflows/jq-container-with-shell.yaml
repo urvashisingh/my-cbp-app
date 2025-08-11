@@ -1,0 +1,27 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: jq container with shell
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        default: 0.0.3
+        required: true
+jobs:
+  build:
+    steps:
+      - name: checkout
+        uses: cloudbees-io/checkout@v1
+      - name: Set up Docker Hub registry
+        kind: deploy
+        uses: cloudbees-io/configure-oci-credentials@v1
+        with:
+          registry: index.docker.io
+          username: ${{ vars.USINGH_DOCKER_USERNAME }}
+          password: ${{ secrets.USINGH_DOCKER_PASSWORD }}
+      - name: Push image to OCI registry
+        with:
+          destination: index.docker.io/${{ vars.USINGH_DOCKER_USERNAME }}/jq:${{ inputs.version }}
+          dockerfile: ./jq/Dockerfile
+        uses: cloudbees-io/kaniko@v1

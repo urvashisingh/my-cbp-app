@@ -6,6 +6,7 @@ on:
     inputs:
       manifest:
         type: string
+
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml

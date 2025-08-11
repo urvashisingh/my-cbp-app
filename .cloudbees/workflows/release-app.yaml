@@ -4,7 +4,7 @@ name: My workflow
 on:
   workflow_dispatch:
     inputs:
-      manifest1:
+      manifest:
         type: string
 jobs:
   deploy-to-dev:

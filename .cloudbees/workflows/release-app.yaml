@@ -8,14 +8,14 @@ on:
         type: string
 jobs:
   deploy-to-dev:
-    uses: ./.cloudbees/workflows/deploy.yaml
+    uses: ./.cloudbees/workflows/deploy.yaml@b2
     with:
       manifest: ${{ inputs.manifest }}
       environment: dev
   deploy-to-prod:
     needs:
       - prod-approval
-    uses: ./.cloudbees/workflows/deploy.yaml
+    uses: ./.cloudbees/workflows/deploy.yaml@b2
     with:
       manifest: ${{ inputs.manifest }}
       environment: prod

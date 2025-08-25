@@ -4,10 +4,11 @@ name: my-staged-workflow
 on:
   workflow_dispatch:
     inputs:
-      manifest1:
+      manifest:
         type: string
         required: true
-        description: Relese manifest with the artifact version details passed by the application release in JSON format
+        description: Relese manifest with the artifact version details passed by the
+          application release in JSON format
 metadata:
   stages/v1alpha1:
     - name: qa

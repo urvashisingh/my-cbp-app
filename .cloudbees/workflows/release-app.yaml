@@ -6,6 +6,8 @@ on:
     inputs:
       manifest:
         type: string
+        default: '{type: "string", value: "some"}'
+        required: true
 jobs:
   deploy-to-dev:
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml@b2

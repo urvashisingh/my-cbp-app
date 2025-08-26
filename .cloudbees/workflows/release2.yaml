@@ -5,7 +5,7 @@ name: My workflow
 on:
   workflow_dispatch: 
     inputs:
-      manifest:
+      manifest2222:
         type: string
         required: true
 

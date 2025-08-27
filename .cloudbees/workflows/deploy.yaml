@@ -31,3 +31,4 @@ jobs:
     with:
       manifest: ${{ toJSON(fromJSON(inputs.manifest).app3) }}
       environment: ${{ inputs.environment }}
+

@@ -1,0 +1,56 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: release-wf-2-del
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        type: string
+jobs:
+  deploy-to-dev:
+    uses: ./.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: dev
+  deploy-to-prod:
+    needs:
+      - prod-approval
+    uses: ./.cloudbees/workflows/deploy.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: prod
+  publish-evidence:
+    steps:
+      - name: publish evidence
+        with:
+          content: This is evidence
+        uses: cloudbees-io/publish-evidence-item@v1
+      - name: publish second evidence
+        with:
+          content: This is another evidence
+        uses: cloudbees-io/publish-evidence-item@v1
+    needs: deploy-to-dev
+  prod-approval:
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    needs: deploy-to-dev
+    with:
+      approvers: ""
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      instructions: ""
+      approvalInputs: |
+        string_param:
+          type: string
+        num_param:
+          type: number
+          default: 5
+        bool_param:
+          type: boolean
+          default: false
+        choice_param:
+          type: choice
+          options:
+            - op1
+            - op2
+          default: ""

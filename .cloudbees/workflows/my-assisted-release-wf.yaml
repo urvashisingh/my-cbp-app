@@ -7,10 +7,9 @@ metadata:
   stages/v1alpha1:
     - name: Prod
       jobs:
-        - Prod
+        - prod
 jobs:
-  Prod:
-    environment: Prod
+  prod:
     uses: ./.cloudbees/workflows/deployer.yaml
     with:
       manifest: ${{ inputs.manifest }}

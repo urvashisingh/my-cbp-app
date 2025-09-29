@@ -46,6 +46,7 @@ jobs:
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1
     with:
+      instructions: Ready for preprod?
       disallowLaunchByUser: false
       notifyAllEligibleUsers: false
       approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35

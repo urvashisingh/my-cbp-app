@@ -4,18 +4,21 @@ name: my-staged-workflow
 on:
   workflow_dispatch:
     inputs:
-      manifest1:
+      manifest:
         type: string
         required: true
-        description: Relese manifest with the artifact version details passed by the application release in JSON format
+        description: Relese manifest with the artifact version details passed by the
+          application release in JSON format
 metadata:
   stages/v1alpha1:
     - name: qa
       jobs:
         - deploy-to-qa
+        - ready-for-preprod
     - name: pre-prod
       jobs:
         - deploy-to-pre-prod
+        - ready-for-prod
     - name: prod
       jobs:
         - deploy-to-prod
@@ -27,15 +30,32 @@ jobs:
       environment: qa
   deploy-to-pre-prod:
     needs:
+      - ready-for-preprod
       - deploy-to-qa
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: pre-prod
   deploy-to-prod:
-    needs:
-      - deploy-to-pre-prod
+    needs: ready-for-prod
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: prod
+  ready-for-preprod:
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    with:
+      instructions: Ready for preprod?
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35
+  ready-for-prod:
+    needs:
+      - deploy-to-pre-prod
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    with:
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35

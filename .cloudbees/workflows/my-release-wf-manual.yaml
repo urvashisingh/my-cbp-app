@@ -14,9 +14,11 @@ metadata:
     - name: qa
       jobs:
         - deploy-to-qa
+        - ready-for-preprod
     - name: pre-prod
       jobs:
         - deploy-to-pre-prod
+        - ready-for-prod
     - name: prod
       jobs:
         - deploy-to-prod
@@ -28,15 +30,31 @@ jobs:
       environment: qa
   deploy-to-pre-prod:
     needs:
+      - ready-for-preprod
       - deploy-to-qa
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: pre-prod
   deploy-to-prod:
-    needs:
-      - deploy-to-pre-prod
+    needs: ready-for-prod
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: prod
+  ready-for-preprod:
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    with:
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35
+  ready-for-prod:
+    needs:
+      - deploy-to-pre-prod
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    with:
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35

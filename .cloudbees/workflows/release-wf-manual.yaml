@@ -58,4 +58,3 @@ jobs:
     with:
       disallowLaunchByUser: false
       notifyAllEligibleUsers: false
-      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35

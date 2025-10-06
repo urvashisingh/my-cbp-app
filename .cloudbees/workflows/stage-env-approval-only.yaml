@@ -5,7 +5,7 @@ on:
   workflow_dispatch: null
 metadata:
   stages/v1alpha1:
-    - name: manual-approval
+    - name: echo
       jobs:
         - QA
     - name: env-approval

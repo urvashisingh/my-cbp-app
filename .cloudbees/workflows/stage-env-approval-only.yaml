@@ -3,6 +3,9 @@ kind: workflow
 name: stage-env-approval-only
 on:
   workflow_dispatch: null
+  push:
+    branches:
+      - "*"
 metadata:
   stages/v1alpha1:
     - name: echo

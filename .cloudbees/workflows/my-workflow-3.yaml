@@ -30,6 +30,7 @@ jobs:
         uses: docker://golang:1.20.3-alpine3.17
         name: Deploy to qa
         shell: sh
+        kind: deploy
   deploy-to-pre-prod:
     needs:
       - deploy-to-qa
@@ -39,6 +40,7 @@ jobs:
         uses: docker://golang:1.20.3-alpine3.17
         name: Deploy to pre-prod
         shell: sh
+        kind: deploy
   deploy-to-prod:
     needs:
       - deploy-to-pre-prod
@@ -48,3 +50,4 @@ jobs:
         uses: docker://golang:1.20.3-alpine3.17
         name: Deploy to prod
         shell: sh
+        kind: deploy

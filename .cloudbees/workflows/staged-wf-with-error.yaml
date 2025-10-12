@@ -1,0 +1,16 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: staged-wf-with-error
+on:
+  workflow_dispatch: null
+metadata:
+  stages/v1alpha1:
+    - name: Prod
+      jobs:
+        - Prod
+jobs:
+  Prod:
+    uses: ./.cloudbees/workflows/deployer-not-exist.yaml
+    with:
+      manifest: ${{ inputs.manifest }}
+      environment: ${{ job.environment }}

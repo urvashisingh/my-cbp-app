@@ -10,7 +10,7 @@ metadata:
         - Prod
 jobs:
   Prod:
-    uses: ./.cloudbees/workflows/deployer.yaml
+    uses: ./.cloudbees/workflows/deployer_err.yaml
     with:
       manifest: ${{ inputs.manifest }}
       environment: ${{ job.environment }}

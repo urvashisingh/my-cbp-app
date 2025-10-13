@@ -7,6 +7,17 @@ on:
       manifest:
         type: string
 
+metadata:
+  stages/v1alpha1:
+    - name: DEV
+      jobs:
+        - deploy-to-dev
+        - publish-evidence
+    - name: PROD
+      jobs:
+        - prod-approval
+        - deploy-to-prod
+
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml
@@ -34,7 +45,7 @@ jobs:
   prod-approval:
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1
-    needs: deploy-to-dev
+    needs: publish-evidence
     with:
       approvers: ""
       disallowLaunchByUser: false

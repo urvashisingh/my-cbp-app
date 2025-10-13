@@ -1,0 +1,45 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: app-deployer
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+  workflow_call:
+    inputs:
+      manifest:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+jobs:
+  approval:
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    needs: publish-evidence
+    with:
+      approvers: ""
+      disallowLaunchByUser: false
+      notifyAllEligibleUsers: false
+      instructions: "Approve deployment"
+  app1:
+    needs: approval 
+    if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}
+    uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
+    with:
+      artifact-id: ${{ fromJSON(inputs.manifest)['app1']['art1'].id }}
+      environment: ${{ inputs.environment }}
+  app3:
+    needs: approval
+    if: ${{ fromJSON(inputs.manifest).app3.deploy }}
+    uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
+    with:
+      artifact-id: ${{ fromJSON(inputs.manifest)['app3']['art3'].id }}
+      environment: ${{ inputs.environment }}
+

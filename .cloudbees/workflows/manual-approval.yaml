@@ -19,7 +19,6 @@ jobs:
     with:
       instructions: ""
       disallowLaunchByUser: false
-      approvers: 4bc37dfe-459a-11ed-a6a3-42010a83ae66,0cb88e48-03d3-11eb-9d67-42010a83ae35
       notifyAllEligibleUsers: false
       approvalInputs: |
         in1:

@@ -4,7 +4,7 @@ name: My workflow
 on:
   workflow_dispatch:
     inputs:
-      ttt:
+      manifest:
         type: string
 
 jobs:

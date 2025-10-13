@@ -6,7 +6,6 @@ on:
     inputs:
       manifest:
         type: string
-
 metadata:
   stages/v1alpha1:
     - name: DEV
@@ -17,7 +16,6 @@ metadata:
       jobs:
         - prod-approval
         - deploy-to-prod
-
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy-with-approval.yaml

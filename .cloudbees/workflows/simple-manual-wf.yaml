@@ -11,3 +11,12 @@ jobs:
         shell: sh
         run: |
           echo "hello world"
+  test-app-disallow-launchby:
+    needs: build
+    with:
+      instructions: ""
+      disallowLaunchByUser: true
+      approvers: ""
+      notifyAllEligibleUsers: false
+    timeout-minutes: 4320
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1

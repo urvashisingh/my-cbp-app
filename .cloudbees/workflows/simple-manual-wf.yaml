@@ -20,4 +20,4 @@ jobs:
       notifyAllEligibleUsers: false
       debug: true
     timeout-minutes: 4320
-    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    delegates: cloudbees-io/manual-approval/custom-job.yml

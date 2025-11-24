@@ -11,11 +11,10 @@ jobs:
         shell: sh
         run: |
           echo "hello world"
-  test-app-disallow-launchby:
+  test-approval:
     needs: build
     with:
       instructions: Test instructions
-      disallowLaunchByUser: true
       approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35
       notifyAllEligibleUsers: false
     timeout-minutes: 4320

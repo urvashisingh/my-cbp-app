@@ -14,10 +14,9 @@ jobs:
   test-app-disallow-launchby:
     needs: build
     with:
-      instructions: "Test instructions"
+      instructions: Test instructions
       disallowLaunchByUser: true
-      approvers: ""
+      approvers: 0cb88e48-03d3-11eb-9d67-42010a83ae35
       notifyAllEligibleUsers: false
-      debug: true
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1

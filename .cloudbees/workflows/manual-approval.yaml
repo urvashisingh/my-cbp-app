@@ -3,8 +3,7 @@ kind: workflow
 name: My workflow
 on:
   workflow_dispatch:
-  workflow_call:  
-
+  workflow_call:
 jobs:
   build:
     steps:
@@ -19,6 +18,7 @@ jobs:
     with:
       instructions: ""
       disallowLaunchByUser: false
+      approvers: manual-approval-test
       notifyAllEligibleUsers: false
       approvalInputs: |
         in1:

@@ -8,6 +8,10 @@ on:
         type: string
         default: '{type: "string", value: "some"}'
         required: true
+      default-param:
+        type: string
+        default: def
+
 jobs:
   deploy-to-dev:
     uses: urvashisingh/my-cbp-app/.cloudbees/workflows/deploy.yaml@b2

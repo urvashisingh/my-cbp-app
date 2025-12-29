@@ -8,6 +8,9 @@ on:
       manifest:
         type: string
         required: true
+      param1:
+        type: boolean
+        description: This is a boolean param
 
 jobs:
   deploy-to-dev:

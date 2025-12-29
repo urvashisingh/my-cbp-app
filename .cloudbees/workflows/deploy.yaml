@@ -24,14 +24,14 @@ jobs:
     if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest)['app1']) }}
+      artifact-id: ${{ fromJSON(inputs.manifest)['app1']['art1'].id }}
       environment: ${{ inputs.environment }}
   app3:
     needs: approval
     if: ${{ fromJSON(inputs.manifest).app3.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ toJSON(fromJSON(inputs.manifest).app3) }}
+      artifact-id: ${{ fromJSON(inputs.manifest)['app3']['art3'].id }}
       environment: ${{ inputs.environment }}   
   approval:
     timeout-minutes: 4320

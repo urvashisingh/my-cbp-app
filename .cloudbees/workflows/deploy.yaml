@@ -21,17 +21,17 @@ on:
 jobs:
   app1:
     needs: approval
-    if: ${{ fromJSON(inputs.manifest)['app1'].deploy }}
+    if: ${{ fromJSON(inputs.manifest)['app1']['art1'].deploy }}
     uses: urvashisingh/app1/.cloudbees/workflows/deploy.yaml
     with:
       artifact-id: ${{ fromJSON(inputs.manifest)['app1']['art1'].id }}
       environment: ${{ inputs.environment }}
   app3:
     needs: approval
-    if: ${{ fromJSON(inputs.manifest).app3.deploy }}
+    if: ${{ fromJSON(inputs.manifest).app3.art3.deploy }}
     uses: urvashisingh/app3/.cloudbees/workflows/deploy.yaml
     with:
-      artifact-id: ${{ fromJSON(inputs.manifest)['app3']['art3'].id }}
+      artifact-id: ${{ fromJSON(inputs.manifest).app3.art3.id }}
       environment: ${{ inputs.environment }}   
   approval:
     timeout-minutes: 4320

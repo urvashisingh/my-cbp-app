@@ -8,6 +8,18 @@ on:
         type: string
         required: true
         description: A sample manifest should go here, to help user
+      patch-release:
+        type: boolean
+        default: false
+        description: Check if this is a patch release
+      staging-db:
+        type: choice
+        options:
+          - mysql
+          - postgresql
+        default: postgresql
+        required: true
+        description: The database to use for staging environment deployment
 metadata:
   stages/v1alpha1:
     - name: preprod-us-west-2
@@ -37,8 +49,8 @@ jobs:
             - op2
           default: op2
     timeout-minutes: 4320
-    delegates: cloudbees-io/manual-approval/custom-job.yml@v1   
-    needs: 
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    needs:
       - deploy-to-preprod-us-west-2
   deploy-to-preprod-us-east-1:
     needs:
@@ -60,6 +72,6 @@ jobs:
             - op2
           default: op2
     timeout-minutes: 4320
-    delegates: cloudbees-io/manual-approval/custom-job.yml@v1   
-    needs: 
+    delegates: cloudbees-io/manual-approval/custom-job.yml@v1
+    needs:
       - deploy-to-preprod-us-east-1

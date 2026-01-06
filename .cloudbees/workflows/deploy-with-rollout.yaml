@@ -1,0 +1,21 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: deploy-with-rollout
+on:
+  workflow_call:
+    inputs:
+      manifest:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+jobs:
+  deploy:
+    if: ${{ fromJSON(inputs.manifest)['comp1']['rollouts-demo'].deploy }}
+    uses: urvashisingh/comp1/.cloudbees/workflows/canary-deploy.yaml
+    with:
+      artifact-id: ${{ fromJSON(inputs.manifest)['comp1']['rollouts-demo'].id }}
+      env: ${{ inputs.environment }}
+      pause: ${{ inputs.environment == 'prod' }}
+  

@@ -20,6 +20,7 @@ on:
         required: true      
 jobs:
   deploy:
+    vars: inherit
     if: ${{ fromJSON(inputs.manifest)['comp1']['rollouts-demo'].deploy }}
     uses: urvashisingh/comp1/.cloudbees/workflows/canary-deploy.yaml
     with:

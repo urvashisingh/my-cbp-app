@@ -1,0 +1,23 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: app-deploy-kind
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+
+jobs:
+  deploy:
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: docker://golang:1.20.3-alpine3.17
+        kind: deploy
+        shell: sh
+        run: |
+          echo "hello world1"
+      - uses: docker://golang:1.20.3-alpine3.17
+        kind: deploy
+        shell: sh
+        run: |
+          echo "hello world2"    

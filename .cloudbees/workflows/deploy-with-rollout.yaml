@@ -25,6 +25,6 @@ jobs:
     uses: urvashisingh/comp1/.cloudbees/workflows/canary-deploy.yaml
     with:
       artifact-id: ${{ fromJSON(inputs.manifest)['comp1']['rollouts-demo'].id }}
-      env: ${{ inputs.environment }}
+      environment: ${{ inputs.environment }}
       pause: ${{ inputs.environment == 'prod' }}
   

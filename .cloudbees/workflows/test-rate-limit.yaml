@@ -3,10 +3,13 @@ kind: workflow
 name: test-rate-limit
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "**"
 jobs:
   build:
     env:
-          CB_API_TOKEN: ${{ secrets.cb_api_pat }}
+      CB_API_TOKEN: ${{ secrets.cb_api_pat }}
     steps:
       - name: Loop
         uses: docker://badouralix/curl-jq-yq:latest
@@ -342,8 +345,6 @@ jobs:
           mkdir -p "${OUTPUTS_DIR}"
           jq -c . manifest.json > "${OUTPUTS_DIR}/manifest"
           cat selection_report.txt > "${OUTPUTS_DIR}/selection_report"
-
-      # Step 2: Check if we should skip release creation
       - id: check-skip-condition
         name: Check if release should be skipped
         uses: docker://alpine:3.18
@@ -403,8 +404,6 @@ jobs:
             echo ""
             echo "false" > should_skip.txt
           fi
-
-      # Step 3: Check for concurrent releases (skip mode only - before create)
       - id: check-concurrent-skip
         name: Check for concurrent releases (skip mode)
         uses: docker://badouralix/curl-jq-yq:latest
@@ -474,8 +473,6 @@ jobs:
           fi
 
           echo "✅ No concurrent releases detected, proceeding with release creation..."
-
-      # Step 4: Create application release via API
       - id: create-release
         name: Create application release via API
         uses: docker://badouralix/curl-jq-yq:latest
@@ -566,8 +563,6 @@ jobs:
           mkdir -p "${OUTPUTS_DIR}"
           echo "${RELEASE_ID}" > "${OUTPUTS_DIR}/release_id"
           echo "${RELEASE_NAME}" > "${OUTPUTS_DIR}/release_name"
-
-      # Step 5: Wait for queue position (wait mode only - after create, before start)
       - id: check-concurrent-wait
         name: Wait for queue position (wait mode)
         uses: docker://badouralix/curl-jq-yq:latest
@@ -674,8 +669,6 @@ jobs:
 
           echo ""
           echo "✅ Our turn! Proceeding to start release..."
-
-      # Step 6: Start the release (run workflow)
       - id: start-release
         name: Start release (run workflow)
         uses: docker://curlimages/curl:8.8.0
@@ -704,8 +697,6 @@ jobs:
 
           echo "Run response:"
           echo "${RESPONSE}"
-
-      # Step 7: Wait for release workflow run to complete (poll automation run)
       - id: wait-release
         name: Wait for release workflow run to complete
         uses: docker://curlimages/curl:8.8.0
@@ -834,8 +825,6 @@ jobs:
             echo "${RUN_ID}" > "${OUTPUTS_DIR}/run_id"
           fi
           exit 0
-
-      # Step 8: Report final result
       - id: report-result
         name: Report release result
         uses: docker://curlimages/curl:8.8.0
@@ -891,8 +880,6 @@ jobs:
               exit 1
               ;;
           esac
-
-      # Step 9: Optionally close the release
       - id: close-release
         name: Close release if configured
         uses: docker://curlimages/curl:8.8.0
@@ -998,8 +985,6 @@ jobs:
             echo "${RESPONSE}"
             echo "✅ Release closed successfully"
           fi
-
-      # Step 10: Consolidate outputs (always runs)
       - id: consolidate-outputs
         name: Consolidate all outputs
         uses: docker://badouralix/curl-jq-yq:latest

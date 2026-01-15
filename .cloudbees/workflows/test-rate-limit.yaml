@@ -5,12 +5,13 @@ on:
   workflow_dispatch:
 jobs:
   build:
+    env:
+          CB_API_TOKEN: ${{ secrets.cb_api_pat }}
     steps:
       - name: Loop
         uses: docker://badouralix/curl-jq-yq:latest
         shell: sh
         env:
-          CB_API_TOKEN: ${{ secrets.cb_api_pat }}
           CB_ORG_ID: f56b861b-e24b-411d-4a35-c3c2c1c277f0
           CB_APPLICATION_ID: 8766b3c3-02a2-41cf-8c37-503d93aa4def
           CB_BASE_URL: https://api.saas-preprod.beescloud.com

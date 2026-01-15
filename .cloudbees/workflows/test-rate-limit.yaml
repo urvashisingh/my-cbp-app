@@ -1,0 +1,1055 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: test-rate-limit
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    steps:
+      - name: Loop
+        uses: docker://badouralix/curl-jq-yq:latest
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ secrets.cb_api_pat }}
+          CB_ORG_ID: f56b861b-e24b-411d-4a35-c3c2c1c277f0
+          CB_APPLICATION_ID: 8766b3c3-02a2-41cf-8c37-503d93aa4def
+          CB_BASE_URL: https://api.saas-preprod.beescloud.com
+          CB_ARTIFACT_LABELS: ""
+          ALLOW_LATEST_VERSION: true
+          OVERRIDE_COMPONENT_ID: ""
+          OVERRIDE_VERSION: ""
+          COMPONENT_OVERRIDES: ""
+          SKIP_RELEASE_ON_MISSING_ARTIFACTS: ""
+          SELECTION_REPORT_FORMAT: markdown
+          ENABLE_DEBUG_LOGGING: true
+        run: |
+          set -eu
+
+          echo "Fetching application service to get linked components..."
+          curl -sS \
+            "${CB_BASE_URL}/v1/organizations/${CB_ORG_ID}/services/${CB_APPLICATION_ID}" \
+            -H "Authorization: Bearer ${CB_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            > service.json
+
+          echo "Linked component IDs for application:"
+          jq '.service.linkedComponentIds' service.json
+
+          # Extract component IDs into a simple list
+          jq -r '.service.linkedComponentIds[]' service.json > components.txt
+
+          if [ ! -s components.txt ]; then
+            echo "ERROR: No linkedComponentIds found for application ${CB_APPLICATION_ID}"
+            cat service.json
+            exit 1
+          fi
+
+          # Count total linked components
+          TOTAL_COMPONENTS=$(wc -l < components.txt | tr -d ' ')
+          echo "Total linked components: ${TOTAL_COMPONENTS}"
+
+          # We'll collect one JSON object per component here:
+          : > artifacts_raw.json
+
+          # Initialize report file
+          : > selection_report.txt
+
+          # Track components with missing artifacts
+          MISSING_COMPONENTS=0
+
+          # Report header - format based on SELECTION_REPORT_FORMAT
+          if [ "${SELECTION_REPORT_FORMAT}" = "markdown" ]; then
+            echo "## Component Selection Report" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "### Configuration" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "- **Exclude 'latest' versions:** \`${ALLOW_LATEST_VERSION}\`" >> selection_report.txt
+            echo "- **Artifact label filters:** \`${CB_ARTIFACT_LABELS:-none}\`" >> selection_report.txt
+            echo "- **Component overrides:** \`${COMPONENT_OVERRIDES:-none}\`" >> selection_report.txt
+            echo "- **Legacy override:** \`${OVERRIDE_COMPONENT_ID:-none}=${OVERRIDE_VERSION:-none}\`" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "### Components Selected" >> selection_report.txt
+            echo "" >> selection_report.txt
+          else
+            echo "Component Selection Report" >> selection_report.txt
+            echo "==========================" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "Configuration:" >> selection_report.txt
+            echo "- Exclude 'latest' versions: ${ALLOW_LATEST_VERSION}" >> selection_report.txt
+            echo "- Artifact label filters: ${CB_ARTIFACT_LABELS:-none}" >> selection_report.txt
+            echo "- Component overrides: ${COMPONENT_OVERRIDES:-none}" >> selection_report.txt
+            echo "- Legacy override: ${OVERRIDE_COMPONENT_ID:-none}=${OVERRIDE_VERSION:-none}" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "Components Selected:" >> selection_report.txt
+          fi
+
+          # Loop over each component and pick the most recent non-"latest" artifact
+          while read -r COMPONENT_ID; do
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo "----------------------------------------"
+              echo "Processing component: ${COMPONENT_ID}"
+            fi
+
+            QUERY="filter.latestOnly=false"
+            if [ -n "${CB_ARTIFACT_LABELS}" ]; then
+              # Split comma-separated labels and add each as a separate filter.labels parameter
+              # This preserves labels with = signs (e.g., "prod=true,dev=true")
+              # Using POSIX-compatible shell syntax instead of bash-specific here-string
+              OLD_IFS="$IFS"
+              IFS=','
+              set -- $CB_ARTIFACT_LABELS
+              IFS="$OLD_IFS"
+              for LABEL in "$@"; do
+                QUERY="${QUERY}&filter.labels=${LABEL}"
+              done
+            fi
+
+            curl -sS \
+              "${CB_BASE_URL}/v3/components/${COMPONENT_ID}/artifactinfos?${QUERY}" \
+              -H "Authorization: Bearer ${CB_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              > "artifacts-${COMPONENT_ID}.json"
+
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo "Artifacts for component ${COMPONENT_ID} (debug):"
+              jq '.artifacts | map({componentId: .resourceId, name: .name, version: .version, when: .audit.when})' "artifacts-${COMPONENT_ID}.json"
+            fi
+
+            # For this component:
+            #  - Conditionally filter out "latest" versions based on ALLOW_LATEST_VERSION
+            #  - Sort remaining by audit.when
+            #  - Pick the last (most recent)
+            if [ "${ALLOW_LATEST_VERSION}" = "true" ]; then
+              if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+                echo "Including 'latest' versions in artifact selection"
+              fi
+              BEST=$(jq '
+                .artifacts
+                | if length == 0 then
+                    empty
+                  else
+                    sort_by(.audit.when)
+                    | last
+                    | {
+                        componentId: .resourceId,
+                        artifactId: .id,
+                        artifactName: .name,
+                        version: .version,
+                        digest: .digest,
+                        url: .url
+                      }
+                  end
+              ' "artifacts-${COMPONENT_ID}.json")
+            else
+              if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+                echo "Excluding 'latest' versions from artifact selection"
+              fi
+              BEST=$(jq '
+                .artifacts
+                | map(select(.version != "latest"))
+                | if length == 0 then
+                    empty
+                  else
+                    sort_by(.audit.when)
+                    | last
+                    | {
+                        componentId: .resourceId,
+                        artifactId: .id,
+                        artifactName: .name,
+                        version: .version,
+                        digest: .digest,
+                        url: .url
+                      }
+                  end
+              ' "artifacts-${COMPONENT_ID}.json")
+            fi
+
+            if [ -z "${BEST}" ]; then
+              if [ "${ALLOW_LATEST_VERSION}" = "true" ]; then
+                echo "No artifact found for component ${COMPONENT_ID}, skipping it."
+              else
+                echo "No non-\"latest\" artifact found for component ${COMPONENT_ID}, skipping it."
+              fi
+              MISSING_COMPONENTS=$((MISSING_COMPONENTS + 1))
+              continue
+            fi
+
+            # Apply overrides if configured for this component
+            OVERRIDE_VERSION_TO_USE=""
+
+            # Check new multi-override format first (component_overrides)
+            if [ -n "${COMPONENT_OVERRIDES}" ]; then
+              # Parse comma-separated componentId=version pairs
+              OLD_IFS="$IFS"
+              IFS=','
+              set -- $COMPONENT_OVERRIDES
+              IFS="$OLD_IFS"
+              for OVERRIDE_PAIR in "$@"; do
+                # Split on '=' to get componentId and version
+                OVERRIDE_COMP_ID="${OVERRIDE_PAIR%%=*}"
+                OVERRIDE_VER="${OVERRIDE_PAIR#*=}"
+                if [ "${COMPONENT_ID}" = "${OVERRIDE_COMP_ID}" ]; then
+                  if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+                    echo "Found override for component ${COMPONENT_ID}: version ${OVERRIDE_VER} (from component_overrides)"
+                  fi
+                  OVERRIDE_VERSION_TO_USE="${OVERRIDE_VER}"
+                  break
+                fi
+              done
+            fi
+
+            # Fall back to legacy single override format (backwards compatibility)
+            if [ -z "${OVERRIDE_VERSION_TO_USE}" ] && [ -n "${OVERRIDE_COMPONENT_ID}" ] && [ -n "${OVERRIDE_VERSION}" ] && [ "${COMPONENT_ID}" = "${OVERRIDE_COMPONENT_ID}" ]; then
+              if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+                echo "Found override for component ${COMPONENT_ID}: version ${OVERRIDE_VERSION} (from legacy override_component_id/override_version)"
+              fi
+              OVERRIDE_VERSION_TO_USE="${OVERRIDE_VERSION}"
+            fi
+
+            # Apply the override if found
+            WAS_OVERRIDDEN="false"
+            if [ -n "${OVERRIDE_VERSION_TO_USE}" ]; then
+              if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+                echo "Applying override version ${OVERRIDE_VERSION_TO_USE} for component ${COMPONENT_ID}"
+              fi
+              BEST=$(printf '%s\n' "${BEST}" | jq --arg v "${OVERRIDE_VERSION_TO_USE}" '.version = $v')
+              WAS_OVERRIDDEN="true"
+            fi
+
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo "Chosen artifact for component ${COMPONENT_ID}:"
+              echo "${BEST}"
+            fi
+
+            # Extract artifact details for reporting
+            ARTIFACT_NAME=$(printf '%s\n' "${BEST}" | jq -r '.artifactName')
+            ARTIFACT_VERSION=$(printf '%s\n' "${BEST}" | jq -r '.version')
+
+            # Add to report - format based on SELECTION_REPORT_FORMAT
+            if [ "${SELECTION_REPORT_FORMAT}" = "markdown" ]; then
+              if [ "${WAS_OVERRIDDEN}" = "true" ]; then
+                echo "- **${ARTIFACT_NAME}**: \`${ARTIFACT_VERSION}\` _(OVERRIDDEN)_" >> selection_report.txt
+              else
+                echo "- **${ARTIFACT_NAME}**: \`${ARTIFACT_VERSION}\`" >> selection_report.txt
+              fi
+            else
+              if [ "${WAS_OVERRIDDEN}" = "true" ]; then
+                printf "- %-50s %s (OVERRIDDEN)\n" "${ARTIFACT_NAME}" "${ARTIFACT_VERSION}" >> selection_report.txt
+              else
+                printf "- %-50s %s\n" "${ARTIFACT_NAME}" "${ARTIFACT_VERSION}" >> selection_report.txt
+              fi
+            fi
+
+            # Append as one JSON object per line
+            printf '%s\n' "${BEST}" >> artifacts_raw.json
+
+          done < components.txt
+
+          # Calculate components found
+          FOUND_COMPONENTS=$((TOTAL_COMPONENTS - MISSING_COMPONENTS))
+          echo ""
+          echo "Component Summary:"
+          echo "  Total linked components: ${TOTAL_COMPONENTS}"
+          echo "  Components with artifacts: ${FOUND_COMPONENTS}"
+          echo "  Components without artifacts: ${MISSING_COMPONENTS}"
+
+          # Save counts for next step
+          echo "${TOTAL_COMPONENTS}" > total_components.txt
+          echo "${FOUND_COMPONENTS}" > found_components.txt
+          echo "${MISSING_COMPONENTS}" > missing_components.txt
+
+          # Check if we have any artifacts
+          if [ ! -s artifacts_raw.json ]; then
+            echo ""
+            echo "WARNING: No usable artifacts found for any linked component."
+
+            # If skip flag is enabled, we'll handle this in the next step
+            # Otherwise, fail immediately
+            if [ "${SKIP_RELEASE_ON_MISSING_ARTIFACTS}" != "true" ]; then
+              echo "ERROR: Cannot create release without any artifacts."
+              exit 1
+            fi
+
+            # Create empty manifest for consistency
+            echo '{"artifactVersions":[]}' > manifest.json
+            echo '{}' > manifest_release_style.json
+          else
+            # Turn the line-delimited JSON objects into the Unify API manifest structure
+            jq -s '{ artifactVersions: . }' artifacts_raw.json > manifest.json
+          fi
+
+          echo "Generated manifest.json (Unify API format):"
+          cat manifest.json
+          echo
+
+          # Generate release-style manifest for workflow inputs (only if we have artifacts)
+          if [ -s artifacts_raw.json ]; then
+            echo "Generating release-style manifest for workflow..."
+            jq -s '
+              reduce .[] as $item ({};
+                # Extract component name from artifact name (everything after last /)
+                ($item.artifactName | split("/") | last) as $compName |
+                . + {
+                  ($compName): {
+                    deploy: true,
+                    id: $item.componentId,
+                    ($item.artifactName): {
+                      deploy: true,
+                      name: $item.artifactName,
+                      url: $item.url,
+                      version: $item.version,
+                      digest: $item.digest,
+                      id: $item.artifactId
+                    }
+                  }
+                }
+              )
+            ' artifacts_raw.json > manifest_release_style.json
+
+            echo "Generated manifest_release_style.json:"
+            cat manifest_release_style.json
+            echo
+          fi
+
+          # Add summary section to report - format based on SELECTION_REPORT_FORMAT
+          echo "" >> selection_report.txt
+          if [ "${SELECTION_REPORT_FORMAT}" = "markdown" ]; then
+            echo "### Summary" >> selection_report.txt
+            echo "" >> selection_report.txt
+            echo "| Metric | Count |" >> selection_report.txt
+            echo "|--------|-------|" >> selection_report.txt
+            echo "| Total linked components | ${TOTAL_COMPONENTS} |" >> selection_report.txt
+            echo "| Components with artifacts | ${FOUND_COMPONENTS} |" >> selection_report.txt
+            echo "| Components without artifacts | ${MISSING_COMPONENTS} |" >> selection_report.txt
+          else
+            echo "Summary:" >> selection_report.txt
+            echo "========" >> selection_report.txt
+            echo "Total linked components:     ${TOTAL_COMPONENTS}" >> selection_report.txt
+            echo "Components with artifacts:   ${FOUND_COMPONENTS}" >> selection_report.txt
+            echo "Components without artifacts: ${MISSING_COMPONENTS}" >> selection_report.txt
+          fi
+
+          # Display selection report
+          echo "========================================="
+          echo "Component Selection Report:"
+          echo "========================================="
+          cat selection_report.txt
+          echo "========================================="
+
+          # Export outputs (CloudBees format)
+          OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+          mkdir -p "${OUTPUTS_DIR}"
+          jq -c . manifest.json > "${OUTPUTS_DIR}/manifest"
+          cat selection_report.txt > "${OUTPUTS_DIR}/selection_report"
+
+      # Step 2: Check if we should skip release creation
+      - id: check-skip-condition
+        name: Check if release should be skipped
+        uses: docker://alpine:3.18
+        shell: sh
+        env:
+          SKIP_RELEASE_ON_MISSING_ARTIFACTS: ${{ inputs.skip_release_on_missing_artifacts }}
+          SELECTION_REPORT_FORMAT: ${{ inputs.selection_report_format }}
+        run: |
+          set -eu
+
+          # Read component counts
+          MISSING_COMPONENTS=$(cat missing_components.txt)
+
+          echo "Checking skip condition..."
+          echo "  Missing components: ${MISSING_COMPONENTS}"
+          echo "  Skip on missing flag: ${SKIP_RELEASE_ON_MISSING_ARTIFACTS}"
+
+          # Determine if we should skip
+          if [ "${SKIP_RELEASE_ON_MISSING_ARTIFACTS}" = "true" ] && [ "${MISSING_COMPONENTS}" -gt 0 ]; then
+            echo ""
+            echo "⚠️  SKIPPING RELEASE CREATION"
+            echo "Reason: ${MISSING_COMPONENTS} component(s) do not have matching artifacts"
+            echo "The skip_release_on_missing_artifacts flag is enabled"
+            echo ""
+            echo "true" > should_skip.txt
+            echo "SKIPPED_MISSING_ARTIFACTS" > final_status.txt
+
+            # Add skip notice to selection report - format based on SELECTION_REPORT_FORMAT
+            echo "" >> selection_report.txt
+            if [ "${SELECTION_REPORT_FORMAT}" = "markdown" ]; then
+              echo "### ⚠️ RELEASE SKIPPED" >> selection_report.txt
+              echo "" >> selection_report.txt
+              echo "Release creation was skipped because **${MISSING_COMPONENTS} component(s)** do not have matching artifacts and \`skip_release_on_missing_artifacts\` is enabled." >> selection_report.txt
+              echo "" >> selection_report.txt
+              echo "_No release was created._" >> selection_report.txt
+            else
+              echo "⚠️  RELEASE SKIPPED" >> selection_report.txt
+              echo "==================" >> selection_report.txt
+              echo "Release creation was skipped because ${MISSING_COMPONENTS} component(s) do not have" >> selection_report.txt
+              echo "matching artifacts and skip_release_on_missing_artifacts is enabled." >> selection_report.txt
+              echo "No release was created." >> selection_report.txt
+            fi
+
+            # Update selection report output
+            OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+            mkdir -p "${OUTPUTS_DIR}"
+            cat selection_report.txt > "${OUTPUTS_DIR}/selection_report"
+
+            # Export outputs with empty/placeholder values for skipped steps
+            echo "SKIPPED_MISSING_ARTIFACTS" > "${OUTPUTS_DIR}/status"
+            echo "" > "${OUTPUTS_DIR}/release_id"
+            echo "" > "${OUTPUTS_DIR}/release_name"
+            echo "" > "${OUTPUTS_DIR}/run_id"
+          else
+            echo ""
+            echo "✅ Proceeding with release creation"
+            echo ""
+            echo "false" > should_skip.txt
+          fi
+
+      # Step 3: Check for concurrent releases (skip mode only - before create)
+      - id: check-concurrent-skip
+        name: Check for concurrent releases (skip mode)
+        uses: docker://badouralix/curl-jq-yq:latest
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
+          PREVENT_CONCURRENT_RELEASES: ${{ inputs.prevent_concurrent_releases }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step (previous steps already decided to skip)
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping concurrent release check (release already being skipped)"
+            exit 0
+          fi
+
+          # Only run for "skip" mode
+          if [ "${PREVENT_CONCURRENT_RELEASES}" != "skip" ]; then
+            echo "Concurrent release check (skip mode) not enabled, proceeding..."
+            exit 0
+          fi
+
+          echo "Checking for concurrent releases to environment: ${CB_ENVIRONMENT}"
+          echo "Mode: SKIP - Will not create release if concurrent detected"
+
+          curl -sS \
+            "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases" \
+            -H "Authorization: Bearer ${CB_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            > releases.json
+
+          # Filter for releases that:
+          # 1. Contain the environment name in the release name
+          # 2. Have a runId (workflow has started)
+          # 3. Are not in terminal state
+          RUNNING_RELEASES=$(jq -r --arg env "${CB_ENVIRONMENT}" '
+            .releases[]?
+            | select(.releaseName | contains($env))
+            | select(.runId != null and .runId != "")
+            | select(.status != "SUCCEEDED" and .status != "FAILED" and .status != "CANCELLED" and .status != "CANCELED" and .status != "CLOSED")
+            | "\(.releaseName) (ID: \(.releaseId), Status: \(.status))"
+          ' releases.json 2>/dev/null || echo "")
+
+          if [ -n "${RUNNING_RELEASES}" ]; then
+            echo "Found running releases for environment ${CB_ENVIRONMENT}:"
+            echo "${RUNNING_RELEASES}"
+            echo ""
+            echo "⚠️  SKIPPING RELEASE CREATION"
+            echo "Reason: Another release is running for environment: ${CB_ENVIRONMENT}"
+            echo ""
+            echo "true" > should_skip.txt
+            echo "SKIPPED_CONCURRENT_RELEASE" > final_status.txt
+
+            # Export outputs
+            OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+            mkdir -p "${OUTPUTS_DIR}"
+            echo "SKIPPED_CONCURRENT_RELEASE" > "${OUTPUTS_DIR}/status"
+            echo "" > "${OUTPUTS_DIR}/release_id"
+            echo "" > "${OUTPUTS_DIR}/release_name"
+            echo "" > "${OUTPUTS_DIR}/run_id"
+
+            echo "✅ Action succeeded without creating release (concurrent release detected)"
+            exit 0
+          fi
+
+          echo "✅ No concurrent releases detected, proceeding with release creation..."
+
+      # Step 4: Create application release via API
+      - id: create-release
+        name: Create application release via API
+        uses: docker://badouralix/curl-jq-yq:latest
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_WORKFLOW_ID: ${{ inputs.cb_workflow_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
+          RELEASE_NAME_PREFIX: ${{ inputs.release_name_prefix }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping release creation (missing artifacts)"
+            exit 0
+          fi
+
+          # Always include environment in release name for identification
+          RELEASE_NAME="${RELEASE_NAME_PREFIX}-${CB_ENVIRONMENT}-$(date -u +%Y%m%d-%H%M%S)"
+          echo "Generated release name: ${RELEASE_NAME}"
+
+          if [ ! -f manifest.json ]; then
+            echo "ERROR: manifest.json not found – did the Build manifest step run?"
+            exit 1
+          fi
+
+          if [ ! -f manifest_release_style.json ]; then
+            echo "ERROR: manifest_release_style.json not found – did the Build manifest step run?"
+            exit 1
+          fi
+
+          echo "Using manifest.json (Unify API format):"
+          cat manifest.json
+          echo
+
+          echo "Using manifest_release_style.json (for workflow inputs):"
+          cat manifest_release_style.json
+          echo
+
+          # Convert release-style manifest to a JSON string for inputs
+          MANIFEST_STRING=$(jq -c . manifest_release_style.json | jq -R .)
+
+          cat > body.json <<EOF
+          {
+            "releaseName": "${RELEASE_NAME}",
+            "automationId": "${CB_WORKFLOW_ID}",
+            "manifest": $(cat manifest.json),
+            "inputs": {
+              "environment": "${CB_ENVIRONMENT}"
+            }
+          }
+          EOF
+
+          echo "Creating release '${RELEASE_NAME}' for application ${CB_APPLICATION_ID}"
+          echo "Request body:"
+          cat body.json
+          echo
+
+          RESPONSE=$(curl -sS -X POST \
+            "${CB_BASE_URL}/v2/applications/${CB_APPLICATION_ID}/releases" \
+            -H "Authorization: Bearer ${CB_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @body.json
+          )
+
+          echo "Raw response:"
+          echo "${RESPONSE}"
+
+          RELEASE_ID=$(printf '%s' "${RESPONSE}" \
+            | grep -Eo '"releaseId"\s*:\s*"[^"]*"' \
+            | head -n1 \
+            | sed 's/.*"releaseId"\s*:\s*"\([^"]*\)".*/\1/')
+
+          if [ -z "${RELEASE_ID}" ]; then
+            echo "ERROR: Could not extract releaseId from response"
+            exit 1
+          fi
+
+          echo "Created release id: ${RELEASE_ID}"
+          echo "${RELEASE_ID}" > release_id.txt
+          echo "${RELEASE_NAME}" > release_name.txt
+
+          # Export outputs (CloudBees format)
+          OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+          mkdir -p "${OUTPUTS_DIR}"
+          echo "${RELEASE_ID}" > "${OUTPUTS_DIR}/release_id"
+          echo "${RELEASE_NAME}" > "${OUTPUTS_DIR}/release_name"
+
+      # Step 5: Wait for queue position (wait mode only - after create, before start)
+      - id: check-concurrent-wait
+        name: Wait for queue position (wait mode)
+        uses: docker://badouralix/curl-jq-yq:latest
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
+          PREVENT_CONCURRENT_RELEASES: ${{ inputs.prevent_concurrent_releases }}
+          QUEUE_CHECK_SLEEP_SECONDS: ${{ inputs.queue_check_sleep_seconds }}
+          ENABLE_DEBUG_LOGGING: ${{ inputs.enable_debug_logging }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping queue check (release already being skipped)"
+            exit 0
+          fi
+
+          # Only run for "wait" mode
+          if [ "${PREVENT_CONCURRENT_RELEASES}" != "wait" ]; then
+            echo "Queue waiting (wait mode) not enabled, proceeding..."
+            exit 0
+          fi
+
+          OUR_RELEASE_ID=$(cat release_id.txt)
+          OUR_RELEASE_NAME=$(cat release_name.txt)
+
+          echo "Checking queue position for release: ${OUR_RELEASE_NAME}"
+          echo "Mode: WAIT - Will wait for releases created before us to complete"
+          echo "Queue check interval: ${QUEUE_CHECK_SLEEP_SECONDS}s (first check is immediate)"
+
+          MAX_WAIT_ATTEMPTS=30
+          attempt=1
+
+          while [ "$attempt" -le "$MAX_WAIT_ATTEMPTS" ]; do
+            echo ""
+            echo "⏳ Queue check attempt ${attempt}/${MAX_WAIT_ATTEMPTS}..."
+
+            curl -sS \
+              "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases" \
+              -H "Authorization: Bearer ${CB_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              > releases.json
+
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo ""
+              echo "DEBUG: Our release name: ${OUR_RELEASE_NAME}"
+              echo "DEBUG: Our release ID: ${OUR_RELEASE_ID}"
+              echo "DEBUG: Target environment: ${CB_ENVIRONMENT}"
+              echo ""
+
+              # Show all releases for this environment
+              echo "DEBUG: All releases for environment ${CB_ENVIRONMENT}:"
+              jq -r --arg env "${CB_ENVIRONMENT}" '
+                .releases[]?
+                | select(.releaseName | contains($env))
+                | "  - \(.releaseName) (ID: \(.releaseId), Status: \(.status), RunID: \(.runId // "none"))"
+              ' releases.json 2>/dev/null || echo "  (none found)"
+              echo ""
+            fi
+
+            # Find releases that:
+            # 1. Are for same environment (contain env name)
+            # 2. Are NOT our release (different ID)
+            # 3. Were created BEFORE us (release name sorts lexicographically by timestamp)
+            # 4. Have started running (have runId) OR are in active states (CREATED, PENDING, STARTED, READY_TO_RUN)
+            # 5. Are not in terminal state
+            BLOCKING_RELEASES=$(jq -r --arg env "${CB_ENVIRONMENT}" --arg ourId "${OUR_RELEASE_ID}" --arg ourName "${OUR_RELEASE_NAME}" '
+              .releases[]?
+              | select(.releaseName | contains($env))
+              | select(.releaseId != $ourId)
+              | select(.releaseName < $ourName)
+              | select(
+                  (.runId != null and .runId != "") or
+                  (.status == "CREATED" or .status == "PENDING" or .status == "STARTED" or .status == "READY_TO_RUN")
+                )
+              | select(.status != "SUCCEEDED" and .status != "FAILED" and .status != "CANCELLED" and .status != "CANCELED" and .status != "CLOSED")
+              | "\(.releaseName) (ID: \(.releaseId), Status: \(.status))"
+            ' releases.json 2>/dev/null || echo "")
+
+            if [ -z "${BLOCKING_RELEASES}" ]; then
+              echo "✅ No releases ahead of us in queue, we can start now!"
+              break
+            fi
+
+            echo "Found releases ahead of us in queue:"
+            echo "${BLOCKING_RELEASES}"
+
+            if [ "$attempt" -eq "$MAX_WAIT_ATTEMPTS" ]; then
+              echo ""
+              TIMEOUT_MINS=$((MAX_WAIT_ATTEMPTS * QUEUE_CHECK_SLEEP_SECONDS / 60))
+              echo "❌ ERROR: Timed out waiting for queue (${MAX_WAIT_ATTEMPTS} attempts, ${TIMEOUT_MINS} minutes)"
+              echo "Releases are still ahead of us in the queue."
+              exit 1
+            fi
+
+            echo "Waiting ${QUEUE_CHECK_SLEEP_SECONDS} seconds before checking again..."
+            sleep "${QUEUE_CHECK_SLEEP_SECONDS}"
+            attempt=$((attempt + 1))
+          done
+
+          echo ""
+          echo "✅ Our turn! Proceeding to start release..."
+
+      # Step 6: Start the release (run workflow)
+      - id: start-release
+        name: Start release (run workflow)
+        uses: docker://curlimages/curl:8.8.0
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping start release (missing artifacts)"
+            exit 0
+          fi
+
+          RELEASE_ID=$(cat release_id.txt)
+          echo "Starting release ${RELEASE_ID}"
+
+          RESPONSE=$(curl -sS -X POST \
+            "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases/${RELEASE_ID}/run" \
+            -H "Authorization: Bearer ${CB_API_TOKEN}" \
+            -H "Content-Type: application/json"
+          )
+
+          echo "Run response:"
+          echo "${RESPONSE}"
+
+      # Step 7: Wait for release workflow run to complete (poll automation run)
+      - id: wait-release
+        name: Wait for release workflow run to complete
+        uses: docker://curlimages/curl:8.8.0
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+          MAX_ATTEMPTS: ${{ inputs.max_wait_attempts }}
+          SLEEP_SECONDS: ${{ inputs.wait_sleep_seconds }}
+          ENABLE_DEBUG_LOGGING: ${{ inputs.enable_debug_logging }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping wait for release (missing artifacts)"
+            exit 0
+          fi
+
+          RELEASE_ID=$(cat release_id.txt)
+          RELEASE_NAME=$(cat release_name.txt)
+          echo "Waiting for workflow run for release \"${RELEASE_NAME}\" (${RELEASE_ID}) to complete..."
+
+          attempt=1
+          LAST_RUN_STATUS="UNKNOWN"
+          RUN_ID=""
+
+          while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+            echo "Poll attempt ${attempt}/${MAX_ATTEMPTS} (release)..."
+            RELEASE_RESP=$(curl -sS \
+              "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases/${RELEASE_ID}" \
+              -H "Authorization: Bearer ${CB_API_TOKEN}" \
+              -H "Content-Type: application/json"
+            )
+
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo "Release status response:"
+              echo "${RELEASE_RESP}"
+            fi
+
+            ORG_ID=$(printf '%s' "${RELEASE_RESP}" \
+              | grep -Eo '"organizationId"\s*:\s*"[^"]*"' \
+              | head -n1 \
+              | sed 's/.*"organizationId"\s*:\s*"\([^"]*\)".*/\1/')
+
+            SERVICE_ID=$(printf '%s' "${RELEASE_RESP}" \
+              | grep -Eo '"componentId"\s*:\s*"[^"]*"' \
+              | head -n1 \
+              | sed 's/.*"componentId"\s*:\s*"\([^"]*\)".*/\1/')
+
+            AUTO_ID=$(printf '%s' "${RELEASE_RESP}" \
+              | grep -Eo '"automationId"\s*:\s*"[^"]*"' \
+              | head -n1 \
+              | sed 's/.*"automationId"\s*:\s*"\([^"]*\)".*/\1/')
+
+            RUN_ID=$(printf '%s' "${RELEASE_RESP}" \
+              | grep -Eo '"runId"\s*:\s*"[^"]*"' \
+              | head -n1 \
+              | sed 's/.*"runId"\s*:\s*"\([^"]*\)".*/\1/')
+
+            if [ -z "${RUN_ID}" ] || [ -z "${ORG_ID}" ] || [ -z "${SERVICE_ID}" ] || [ -z "${AUTO_ID}" ]; then
+              echo "No automation run info yet – sleeping ${SLEEP_SECONDS}s..."
+              sleep "${SLEEP_SECONDS}"
+              attempt=$((attempt + 1))
+              continue
+            fi
+
+            echo "Found automation run: org=${ORG_ID}, service=${SERVICE_ID}, automation=${AUTO_ID}, runId=${RUN_ID}"
+            echo "Polling automation run status..."
+
+            RUN_RESP=$(curl -sS \
+              "${CB_BASE_URL}/v1/organizations/${ORG_ID}/services/${SERVICE_ID}/automations/${AUTO_ID}/runs/${RUN_ID}" \
+              -H "Authorization: Bearer ${CB_API_TOKEN}" \
+              -H "Content-Type: application/json"
+            )
+
+            if [ "${ENABLE_DEBUG_LOGGING}" = "true" ]; then
+              echo "Automation run response:"
+              echo "${RUN_RESP}"
+            fi
+
+            RUN_STATUS=$(printf '%s' "${RUN_RESP}" \
+              | grep -Eo '"status"\s*:\s*"[^"]*"' \
+              | head -n1 \
+              | sed 's/.*"status"\s*:\s*"\([^"]*\)".*/\1/')
+
+            LAST_RUN_STATUS="${RUN_STATUS}"
+            echo "Current automation run status: ${RUN_STATUS}"
+
+            RUN_STATUS_UPPER=$(printf '%s' "${RUN_STATUS}" | tr '[:lower:]' '[:upper:]')
+
+            case "${RUN_STATUS_UPPER}" in
+              "SUCCEEDED"|"SUCCESS")
+                echo "Automation run completed successfully."
+                echo "${RUN_STATUS_UPPER}" > run_status.txt
+                # Export output (CloudBees format)
+                OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+                mkdir -p "${OUTPUTS_DIR}"
+                echo "${RUN_ID}" > "${OUTPUTS_DIR}/run_id"
+                exit 0
+                ;;
+              "FAILED"|"FAILURE"|"ERROR"|"CANCELLED"|"CANCELED")
+                echo "Automation run finished with failure status: ${RUN_STATUS}"
+                echo "${RUN_STATUS_UPPER}" > run_status.txt
+                # Export output (CloudBees format)
+                OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+                mkdir -p "${OUTPUTS_DIR}"
+                echo "${RUN_ID}" > "${OUTPUTS_DIR}/run_id"
+                exit 0
+                ;;
+              *)
+                echo "Automation run still in progress (status=${RUN_STATUS}). Sleeping ${SLEEP_SECONDS}s..."
+                sleep "${SLEEP_SECONDS}"
+                attempt=$((attempt + 1))
+                ;;
+            esac
+          done
+
+          echo "Timed out waiting for automation run. Last known run status: ${LAST_RUN_STATUS}"
+          echo "TIMEOUT" > run_status.txt
+          if [ -n "${RUN_ID}" ]; then
+            # Export output (CloudBees format)
+            OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+            mkdir -p "${OUTPUTS_DIR}"
+            echo "${RUN_ID}" > "${OUTPUTS_DIR}/run_id"
+          fi
+          exit 0
+
+      # Step 8: Report final result
+      - id: report-result
+        name: Report release result
+        uses: docker://curlimages/curl:8.8.0
+        shell: sh
+        run: |
+          set -eu
+
+          # Check if release was skipped (missing artifacts or concurrent release)
+          if [ -f final_status.txt ]; then
+            FINAL_STATUS=$(cat final_status.txt)
+            echo "Release was skipped: ${FINAL_STATUS}"
+
+            # Status was already exported by earlier steps
+            case "${FINAL_STATUS}" in
+              SKIPPED_MISSING_ARTIFACTS)
+                echo "⚠️  Release creation skipped due to missing component artifacts."
+                ;;
+              SKIPPED_CONCURRENT_RELEASE)
+                echo "⚠️  Release creation skipped due to concurrent release running."
+                ;;
+              *)
+                echo "⚠️  Release creation skipped: ${FINAL_STATUS}"
+                ;;
+            esac
+            echo "Action succeeded without creating a release."
+            exit 0
+          fi
+
+          if [ ! -f run_status.txt ]; then
+            echo "No run_status.txt found – something went wrong earlier."
+            exit 1
+          fi
+
+          RUN_STATUS=$(cat run_status.txt)
+          echo "Final automation run status: ${RUN_STATUS}"
+
+          # Export status output (CloudBees format)
+          OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+          mkdir -p "${OUTPUTS_DIR}"
+          echo "${RUN_STATUS}" > "${OUTPUTS_DIR}/status"
+
+          case "${RUN_STATUS}" in
+            SUCCEEDED|SUCCESS)
+              echo "✅ Release workflow succeeded."
+              exit 0
+              ;;
+            TIMEOUT)
+              echo "⚠️ Release workflow did not finish in time (timeout)."
+              exit 1
+              ;;
+            *)
+              echo "❌ Release workflow failed with status: ${RUN_STATUS}"
+              exit 1
+              ;;
+          esac
+
+      # Step 9: Optionally close the release
+      - id: close-release
+        name: Close release if configured
+        uses: docker://curlimages/curl:8.8.0
+        shell: sh
+        env:
+          CB_API_TOKEN: ${{ inputs.cb_api_token }}
+          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
+          CB_BASE_URL: ${{ inputs.cb_base_url }}
+          CLOSE_ON_PASS: ${{ inputs.close_on_pass }}
+          CLOSE_ON_FAIL: ${{ inputs.close_on_fail }}
+        run: |
+          set -eu
+
+          # Check if we should skip this step (no release was created)
+          if [ -f should_skip.txt ] && [ "$(cat should_skip.txt)" = "true" ]; then
+            echo "Skipping close release (no release was created)"
+            exit 0
+          fi
+
+          if [ ! -f run_status.txt ] || [ ! -f release_id.txt ]; then
+            echo "Missing status or release ID files - skipping close operation"
+            exit 0
+          fi
+
+          RUN_STATUS=$(cat run_status.txt)
+          RELEASE_ID=$(cat release_id.txt)
+          SHOULD_CLOSE="false"
+
+          case "${RUN_STATUS}" in
+            SUCCEEDED|SUCCESS)
+              if [ "${CLOSE_ON_PASS}" = "true" ]; then
+                echo "Release succeeded and close_on_pass is enabled"
+                SHOULD_CLOSE="true"
+              else
+                echo "Release succeeded but close_on_pass is not enabled - keeping release open"
+              fi
+              ;;
+            FAILED|FAILURE|ERROR|CANCELLED|CANCELED)
+              if [ "${CLOSE_ON_FAIL}" = "true" ]; then
+                echo "Release failed and close_on_fail is enabled"
+                SHOULD_CLOSE="true"
+              else
+                echo "Release failed but close_on_fail is not enabled - keeping release open for investigation"
+              fi
+              ;;
+            TIMEOUT)
+              if [ "${CLOSE_ON_FAIL}" = "true" ]; then
+                echo "Release timed out and close_on_fail is enabled"
+                SHOULD_CLOSE="true"
+              else
+                echo "Release timed out but close_on_fail is not enabled - keeping release open"
+              fi
+              ;;
+            *)
+              echo "Unknown status: ${RUN_STATUS} - not closing release"
+              ;;
+          esac
+
+          if [ "${SHOULD_CLOSE}" = "true" ]; then
+            echo "Waiting for release to finish processing before closing..."
+
+            # Poll until processingRequest == false to avoid distributed lock contention
+            MAX_CLOSE_WAIT=30
+            close_attempt=1
+            while [ "$close_attempt" -le "$MAX_CLOSE_WAIT" ]; do
+              echo "Checking release processing status (attempt ${close_attempt}/${MAX_CLOSE_WAIT})..."
+
+              RELEASE_CHECK=$(curl -sS \
+                "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases/${RELEASE_ID}" \
+                -H "Authorization: Bearer ${CB_API_TOKEN}" \
+                -H "Content-Type: application/json"
+              )
+
+              # Extract processingRequest field - it should be "false" (as a string)
+              PROCESSING=$(printf '%s' "${RELEASE_CHECK}" \
+                | grep -Eo '"processingRequest"\s*:\s*(true|false)' \
+                | head -n1 \
+                | sed 's/.*:\s*\(true\|false\)/\1/')
+
+              echo "processingRequest: ${PROCESSING}"
+
+              if [ "${PROCESSING}" = "false" ]; then
+                echo "Release processing complete, proceeding to close..."
+                break
+              fi
+
+              if [ "$close_attempt" -eq "$MAX_CLOSE_WAIT" ]; then
+                echo "WARNING: Release still processing after ${MAX_CLOSE_WAIT} attempts, attempting close anyway..."
+                break
+              fi
+
+              sleep 2
+              close_attempt=$((close_attempt + 1))
+            done
+
+            echo "Closing release ${RELEASE_ID}..."
+            RESPONSE=$(curl -sS -X POST \
+              "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases/${RELEASE_ID}/close" \
+              -H "Authorization: Bearer ${CB_API_TOKEN}" \
+              -H "Content-Type: application/json"
+            )
+            echo "Close response:"
+            echo "${RESPONSE}"
+            echo "✅ Release closed successfully"
+          fi
+
+      # Step 10: Consolidate outputs (always runs)
+      - id: consolidate-outputs
+        name: Consolidate all outputs
+        uses: docker://badouralix/curl-jq-yq:latest
+        shell: sh
+        run: |
+          set -eu
+
+          # This step ensures all outputs are available even if earlier steps were skipped
+          # Read from the existing output files and re-export them
+          OUTPUTS_DIR="${CLOUDBEES_OUTPUTS:-.}"
+          mkdir -p "${OUTPUTS_DIR}"
+
+          # Check if we skipped the release
+          if [ -f final_status.txt ]; then
+            FINAL_STATUS=$(cat final_status.txt)
+            echo "Release was skipped, status: ${FINAL_STATUS}"
+            echo "${FINAL_STATUS}" > "${OUTPUTS_DIR}/status"
+          elif [ -f run_status.txt ]; then
+            RUN_STATUS=$(cat run_status.txt)
+            echo "Release completed, status: ${RUN_STATUS}"
+            echo "${RUN_STATUS}" > "${OUTPUTS_DIR}/status"
+          else
+            echo "No status files found, setting to UNKNOWN"
+            echo "UNKNOWN" > "${OUTPUTS_DIR}/status"
+          fi
+
+          # These files should always exist (created by build-manifest or check-skip-condition)
+          if [ -f manifest.json ]; then
+            jq -c . manifest.json > "${OUTPUTS_DIR}/manifest"
+          fi
+
+          if [ -f selection_report.txt ]; then
+            cat selection_report.txt > "${OUTPUTS_DIR}/selection_report"
+          fi
+
+          # These files may be empty if release was skipped
+          if [ -f release_id.txt ]; then
+            cat release_id.txt > "${OUTPUTS_DIR}/release_id"
+          else
+            echo "" > "${OUTPUTS_DIR}/release_id"
+          fi
+
+          if [ -f release_name.txt ]; then
+            cat release_name.txt > "${OUTPUTS_DIR}/release_name"
+          else
+            echo "" > "${OUTPUTS_DIR}/release_name"
+          fi
+
+          # run_id comes from wait-release step
+          if [ ! -f "${OUTPUTS_DIR}/run_id" ]; then
+            echo "" > "${OUTPUTS_DIR}/run_id"
+          fi
+
+          echo "All outputs consolidated successfully"

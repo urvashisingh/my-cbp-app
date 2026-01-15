@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     env:
-      CB_API_TOKEN: ${{ vars.cb_api_pat }}
+      CB_API_TOKEN: ${{ secrets.cb_api_pat }}
     steps:
       - name: Loop
         uses: docker://badouralix/curl-jq-yq:latest

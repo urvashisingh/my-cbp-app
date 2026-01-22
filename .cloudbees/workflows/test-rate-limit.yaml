@@ -7,22 +7,27 @@ jobs:
   build:
     env:
       CB_API_TOKEN: ${{ secrets.cb_api_pat }}
+      CB_ORG_ID: f56b861b-e24b-411d-4a35-c3c2c1c277f0
+      CB_APPLICATION_ID: 8766b3c3-02a2-41cf-8c37-503d93aa4def
+      CB_BASE_URL: https://api.saas-preprod.beescloud.com
+      CB_ENVIRONMENT: dev
+      PREVENT_CONCURRENT_RELEASES: true
+      CB_ARTIFACT_LABELS: ""
+      ALLOW_LATEST_VERSION: true
+      OVERRIDE_COMPONENT_ID: ""
+      OVERRIDE_VERSION: ""
+      COMPONENT_OVERRIDES: ""
+      SKIP_RELEASE_ON_MISSING_ARTIFACTS: ""
+      SELECTION_REPORT_FORMAT: markdown
+      ENABLE_DEBUG_LOGGING: true
+      RELEASE_NAME_PREFIX: rate-limit
+      QUEUE_CHECK_SLEEP_SECONDS: 10
+      MAX_ATTEMPTS: 60
+      SLEEP_SECONDS: 10
     steps:
       - name: Loop
         uses: docker://badouralix/curl-jq-yq:latest
         shell: sh
-        env:
-          CB_ORG_ID: f56b861b-e24b-411d-4a35-c3c2c1c277f0
-          CB_APPLICATION_ID: 8766b3c3-02a2-41cf-8c37-503d93aa4def
-          CB_BASE_URL: https://api.saas-preprod.beescloud.com
-          CB_ARTIFACT_LABELS: ""
-          ALLOW_LATEST_VERSION: true
-          OVERRIDE_COMPONENT_ID: ""
-          OVERRIDE_VERSION: ""
-          COMPONENT_OVERRIDES: ""
-          SKIP_RELEASE_ON_MISSING_ARTIFACTS: ""
-          SELECTION_REPORT_FORMAT: markdown
-          ENABLE_DEBUG_LOGGING: true
         run: |
           set -eu
 
@@ -346,9 +351,6 @@ jobs:
         name: Check if release should be skipped
         uses: docker://alpine:3.18
         shell: sh
-        env:
-          SKIP_RELEASE_ON_MISSING_ARTIFACTS: ${{ inputs.skip_release_on_missing_artifacts }}
-          SELECTION_REPORT_FORMAT: markdown
         run: |
           set -eu
 
@@ -405,12 +407,7 @@ jobs:
         name: Check for concurrent releases (skip mode)
         uses: docker://badouralix/curl-jq-yq:latest
         shell: sh
-        env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
-          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
-          PREVENT_CONCURRENT_RELEASES: ${{ inputs.prevent_concurrent_releases }}
+          
         run: |
           set -eu
 
@@ -474,13 +471,6 @@ jobs:
         name: Create application release via API
         uses: docker://badouralix/curl-jq-yq:latest
         shell: sh
-        env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_WORKFLOW_ID: ${{ inputs.cb_workflow_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
-          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
-          RELEASE_NAME_PREFIX: ${{ inputs.release_name_prefix }}
         run: |
           set -eu
 
@@ -564,14 +554,7 @@ jobs:
         name: Wait for queue position (wait mode)
         uses: docker://badouralix/curl-jq-yq:latest
         shell: sh
-        env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
-          CB_ENVIRONMENT: ${{ inputs.cb_environment }}
-          PREVENT_CONCURRENT_RELEASES: ${{ inputs.prevent_concurrent_releases }}
-          QUEUE_CHECK_SLEEP_SECONDS: ${{ inputs.queue_check_sleep_seconds }}
-          ENABLE_DEBUG_LOGGING: ${{ inputs.enable_debug_logging }}
+          
         run: |
           set -eu
 
@@ -670,10 +653,6 @@ jobs:
         name: Start release (run workflow)
         uses: docker://curlimages/curl:8.8.0
         shell: sh
-        env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
         run: |
           set -eu
 
@@ -698,13 +677,6 @@ jobs:
         name: Wait for release workflow run to complete
         uses: docker://curlimages/curl:8.8.0
         shell: sh
-        env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
-          MAX_ATTEMPTS: ${{ inputs.max_wait_attempts }}
-          SLEEP_SECONDS: ${{ inputs.wait_sleep_seconds }}
-          ENABLE_DEBUG_LOGGING: ${{ inputs.enable_debug_logging }}
         run: |
           set -eu
 
@@ -882,11 +854,8 @@ jobs:
         uses: docker://curlimages/curl:8.8.0
         shell: sh
         env:
-          CB_API_TOKEN: ${{ inputs.cb_api_token }}
-          CB_APPLICATION_ID: ${{ inputs.cb_application_id }}
-          CB_BASE_URL: ${{ inputs.cb_base_url }}
-          CLOSE_ON_PASS: ${{ inputs.close_on_pass }}
-          CLOSE_ON_FAIL: ${{ inputs.close_on_fail }}
+          CLOSE_ON_PASS: true
+          CLOSE_ON_FAIL: true
         run: |
           set -eu
 

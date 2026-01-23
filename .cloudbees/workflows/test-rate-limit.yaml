@@ -23,7 +23,6 @@ jobs:
       ENABLE_DEBUG_LOGGING: true
       RELEASE_NAME_PREFIX: rate-limit
       QUEUE_CHECK_SLEEP_SECONDS: 10
-      MAX_ATTEMPTS: 60
       SLEEP_SECONDS: 10
     steps:
       - name: Loop
@@ -692,6 +691,7 @@ jobs:
           echo "Waiting for workflow run for release \"${RELEASE_NAME}\" (${RELEASE_ID}) to complete..."
 
           attempt=1
+          MAX_ATTEMPTS=60
           LAST_RUN_STATUS="UNKNOWN"
           RUN_ID=""
 

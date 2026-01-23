@@ -691,12 +691,12 @@ jobs:
           RELEASE_NAME=$(cat release_name.txt)
           echo "Waiting for workflow run for release \"${RELEASE_NAME}\" (${RELEASE_ID}) to complete..."
 
-          attempt=30
+          attempt=1
           LAST_RUN_STATUS="UNKNOWN"
           RUN_ID=""
 
           while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
-            echo "Poll attempt ${attempt}/${MAX_ATTEMPTS} (release)..."
+            echo "Poll attempt ${attempt} of ${MAX_ATTEMPTS} (release)..."
             RELEASE_RESP=$(curl -sS \
               "${CB_BASE_URL}/v3/applications/${CB_APPLICATION_ID}/releases/${RELEASE_ID}" \
               -H "Authorization: Bearer ${CB_API_TOKEN}" \

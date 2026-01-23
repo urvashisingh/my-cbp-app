@@ -22,8 +22,7 @@ jobs:
       SELECTION_REPORT_FORMAT: markdown
       ENABLE_DEBUG_LOGGING: true
       RELEASE_NAME_PREFIX: rate-limit
-      QUEUE_CHECK_SLEEP_SECONDS: 10
-      SLEEP_SECONDS: 10
+      
     steps:
       - name: Loop
         uses: docker://badouralix/curl-jq-yq:latest
@@ -572,6 +571,8 @@ jobs:
 
           OUR_RELEASE_ID=$(cat release_id.txt)
           OUR_RELEASE_NAME=$(cat release_name.txt)
+          QUEUE_CHECK_SLEEP_SECONDS=10
+          
 
           echo "Checking queue position for release: ${OUR_RELEASE_NAME}"
           echo "Mode: WAIT - Will wait for releases created before us to complete"
@@ -692,6 +693,7 @@ jobs:
 
           attempt=1
           MAX_ATTEMPTS=60
+          SLEEP_SECONDS=10
           LAST_RUN_STATUS="UNKNOWN"
           RUN_ID=""
 

@@ -695,6 +695,7 @@ jobs:
           LAST_RUN_STATUS="UNKNOWN"
           RUN_ID=""
 
+          echo "DEBUG: attempt:*${attempt}* of *${MAX_ATTEMPTS}*"
           while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
             echo "Poll attempt ${attempt} of ${MAX_ATTEMPTS} (release)..."
             RELEASE_RESP=$(curl -sS \

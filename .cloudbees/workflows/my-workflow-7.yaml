@@ -8,6 +8,8 @@ on:
       manifest:
         type: string
         required: true
+      environment:
+        type: string
 
 jobs:
   release:

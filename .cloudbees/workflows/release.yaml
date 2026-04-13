@@ -6,7 +6,6 @@ on:
     inputs:
       manifest:
         type: string
-
 metadata:
   stages/v1alpha1:
     - name: DEV
@@ -17,7 +16,6 @@ metadata:
       jobs:
         - prod-approval
         - deploy-to-prod
-
 jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml
@@ -32,16 +30,31 @@ jobs:
       manifest: ${{ inputs.manifest }}
       environment: prod
   publish-evidence:
+    needs: deploy-to-dev
     steps:
-      - name: publish evidence
-        with:
-          content: This is evidence
+      - with:
+          content: "         | First Header  | Second Header |
+
+            \            | ------------- | ------------- |
+
+            \            | No Link       | [Link to prod](https://cloudbees.io/cloudbees/)  |
+
+            \            | [Relative Link with leading slash](/cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
+
+            \            | [Relative Link without leading slash](cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
+
+
+            \           \ 
+
+            \            [ JIRA fixed ](https://cloudbees.atlassian.net/browse/CBP-36141)
+
+            \   "
         uses: cloudbees-io/publish-evidence-item@v1
+        name: publish evidence
       - name: publish second evidence
         with:
           content: This is another evidence
         uses: cloudbees-io/publish-evidence-item@v1
-    needs: deploy-to-dev
   prod-approval:
     timeout-minutes: 4320
     delegates: cloudbees-io/manual-approval/custom-job.yml@v1

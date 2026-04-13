@@ -34,13 +34,12 @@ jobs:
     steps:
       - with:
           content: |
-| First Header  | Second Header |
-| ------------- | ------------- |
-| No Link       | [Link to prod](https://cloudbees.io/cloudbees/)  |
-| [Relative Link with leading slash](/cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
-| [Relative Link without leading slash](cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
-[ JIRA fixed ](https://cloudbees.atlassian.net/browse/CBP-36141)
-
+          | First Header  | Second Header |
+          | ------------- | ------------- |
+          | No Link       | [Link to prod](https://cloudbees.io/cloudbees/)  |
+          | [Relative Link with leading slash](/cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
+          | [Relative Link without leading slash](cloudbees-preprod/f56b861b-e24b-411d-4a35-c3c2c1c277f0/components/9bf74eca-17d1-4a01-992a-1d092a9b9a7b/workflows?componentId=9bf74eca-17d1-4a01-992a-1d092a9b9a7b&organizationId=f56b861b-e24b-411d-4a35-c3c2c1c277f0)       | [Link to pre-prod](https://saas-preprod.beescloud.com)  |
+          [ JIRA fixed ](https://cloudbees.atlassian.net/browse/CBP-36141)
         uses: cloudbees-io/publish-evidence-item@v1
         name: publish evidence
       - name: publish second evidence

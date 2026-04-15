@@ -13,13 +13,4 @@ jobs:
         shell: sh
         run: |
           echo "App property app_prop1: ${{vars.app_prop1}}"
-          echo "App property app_prop1: ${{vars.app_prop2}}"
-          echo "Inherited DOCKER_USERNAME: ${{vars.DOCKER_USERNAME}}"
-          echo "Inherited DOCKER_PASSWORD: ${{vars.DOCKER_PASSWORD}}"
-          echo "App secret us_test_secret_app: ${{secrets.us_test_secret_app}}"
-          if [ "${{secrets.us_test_secret_app}}" = "${{secrets.us_test_secret_org}}" ]; then
-            echo "App secret matches org secret value"
-          else 
-            echo "App secret does not match org secret value"
-          fi
-
+          

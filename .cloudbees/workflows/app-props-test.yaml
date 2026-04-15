@@ -19,4 +19,12 @@ jobs:
           echo "App secret us_test_secret_app: ${{secrets.us_test_secret_app}}"
           echo "Org secret us_test_secret_org: ${{secrets.us_test_secret_org}}"
           
+          if [ "${{secrets.us_test_secret_app}}" = "${{secrets.us_test_secret_org}}" ]; then
+            echo "App secret matches org secret value"
+          else 
+            echo "App secret does not match org secret value"
+          fi
+
+
+          
           

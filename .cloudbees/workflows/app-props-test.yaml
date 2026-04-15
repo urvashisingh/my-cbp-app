@@ -15,6 +15,6 @@ jobs:
           echo "App property app_prop1: ${{vars.app_prop1}}"
           echo "App property app_prop1: ${{vars.app_prop2}}"
           echo "Inherited DOCKER_USERNAME: ${{vars.DOCKER_USERNAME}}"
-          echo "Inherited DOCKER_PASSWORD: ${{vars.DOCKER_PASSWORD}}"
+          echo "Inherited DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}"
           
           

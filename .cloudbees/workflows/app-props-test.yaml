@@ -3,7 +3,7 @@ kind: workflow
 name: app-props-test
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 jobs:
   build:

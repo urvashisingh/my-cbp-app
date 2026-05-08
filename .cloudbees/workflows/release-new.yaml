@@ -6,6 +6,8 @@ on:
     inputs:
       manifest:
         type: string
+      flag-ids:
+        type: string
 metadata:
   stages/v1alpha1:
     - name: DEV

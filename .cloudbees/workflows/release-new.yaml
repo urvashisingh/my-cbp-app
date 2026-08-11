@@ -22,7 +22,7 @@ jobs:
   deploy-to-dev:
     uses: ./.cloudbees/workflows/deploy.yaml
     with:
-      manifest: ${{ inputs.manifest }}
+      manifest: ${{ inputs.manifest1 }}
       environment: dev
   deploy-to-prod:
     needs:

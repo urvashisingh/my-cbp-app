@@ -21,10 +21,10 @@ metadata:
         - prod
 jobs:
   dev:
-    environment: dev
     uses: ./.cloudbees/workflows/deployer.yaml
+    environment: dev
     with:
-      manifest: ${{ inputs.manifest }}
+      manifest: ${{ inputs.manifest1 }}
       environment: ${{ job.environment }}
   pre-prod:
     needs:

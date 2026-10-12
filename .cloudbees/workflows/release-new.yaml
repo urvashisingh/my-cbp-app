@@ -8,6 +8,10 @@ on:
         type: string
       flag-ids:
         type: string
+      str1:
+        type: string
+      num:
+        type: number
 metadata:
   stages/v1alpha1:
     - name: DEV
